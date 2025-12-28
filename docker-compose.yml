@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  tvtv2xmltv:
+    build: .
+    container_name: tvtv2xmltv
+    ports:
+      - "${TVTV_PORT:-8080}:8080"
+    environment:
+      - TVTV_TIMEZONE=${TVTV_TIMEZONE:-America/New_York}
+      - TVTV_LINEUP_ID=${TVTV_LINEUP_ID:-USA-OTA30236}
+      - TVTV_DAYS=${TVTV_DAYS:-8}
+      - TVTV_UPDATE_INTERVAL=${TVTV_UPDATE_INTERVAL:-3600}
+      - TVTV_PORT=8080
+      - TVTV_HOST=0.0.0.0
+    volumes:
+      - xmltv-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  xmltv-data:
