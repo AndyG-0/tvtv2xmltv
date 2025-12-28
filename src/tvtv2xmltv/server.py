@@ -5,6 +5,7 @@ HTTP server module for serving XMLTV files
 import os
 import threading
 import time
+from datetime import datetime
 from flask import Flask, send_file, jsonify
 from .converter import TVTVConverter
 from .config import Config
@@ -76,12 +77,7 @@ class XMLTVServer:
             try:
                 print(f"Updating XMLTV file: {self.config.output_file}")
                 self.converter.save_to_file()
-                self.last_update = time.time()
-                self.last_update = time.localtime(self.last_update)
-                self.last_update = time.strftime("%Y-%m-%d %H:%M:%S", self.last_update)
-                from datetime import datetime
-
-                self.last_update = datetime.strptime(self.last_update, "%Y-%m-%d %H:%M:%S")
+                self.last_update = datetime.now()
                 print(f"XMLTV file updated successfully at {self.last_update}")
             except Exception as e:
                 print(f"Error updating XMLTV file: {e}")
