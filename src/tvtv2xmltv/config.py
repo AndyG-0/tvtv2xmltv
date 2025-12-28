@@ -15,7 +15,8 @@ class Config:
         self.output_file = os.getenv("TVTV_OUTPUT_FILE", "xmltv.xml")
         self.update_interval = int(os.getenv("TVTV_UPDATE_INTERVAL", "3600"))
         self.port = int(os.getenv("TVTV_PORT", "8080"))
-        self.host = os.getenv("TVTV_HOST", "0.0.0.0")
+        # Binding to 0.0.0.0 is intentional for Docker/server deployment
+        self.host = os.getenv("TVTV_HOST", "0.0.0.0")  # nosec B104
 
         # Validate days (max 8)
         if self.days > 8:

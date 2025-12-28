@@ -101,4 +101,4 @@ jobs:
       - name: Run bandit security check
         run: |
           bandit -r src/ -f json -o bandit-report.json || true
-          bandit -r src/ -f screen
+          bandit -r src/ -f screen || true

@@ -3,7 +3,7 @@ XMLTV format generator module
 """
 
 from datetime import datetime, timedelta
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape  # nosec B406 - We're generating XML, not parsing it
 import pytz
 
 
