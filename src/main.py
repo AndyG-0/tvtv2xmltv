@@ -11,32 +11,29 @@ from tvtv2xmltv.server import XMLTVServer
 
 def main():
     """Main function"""
-    parser = argparse.ArgumentParser(description='Convert TVTV data to XMLTV format')
+    parser = argparse.ArgumentParser(description="Convert TVTV data to XMLTV format")
     parser.add_argument(
-        '--mode',
-        choices=['convert', 'serve'],
-        default='serve',
-        help='Mode of operation: convert (one-time) or serve (HTTP server)'
+        "--mode",
+        choices=["convert", "serve"],
+        default="serve",
+        help="Mode of operation: convert (one-time) or serve (HTTP server)",
     )
-    parser.add_argument(
-        '--output',
-        help='Output filename (only for convert mode)'
-    )
-    
+    parser.add_argument("--output", help="Output filename (only for convert mode)")
+
     args = parser.parse_args()
-    
+
     config = Config()
-    
-    if args.mode == 'convert':
+
+    if args.mode == "convert":
         # One-time conversion
         converter = TVTVConverter(config)
         output_file = args.output or config.output_file
-        
+
         print(f"Converting TVTV data to XMLTV format...")
         print(f"Lineup ID: {config.lineup_id}")
         print(f"Timezone: {config.timezone}")
         print(f"Days: {config.days}")
-        
+
         try:
             result = converter.save_to_file(output_file)
             print(f"XMLTV file saved to: {result}")
@@ -53,7 +50,7 @@ def main():
         print(f"Timezone: {config.timezone}")
         print(f"Days: {config.days}")
         print(f"Update interval: {config.update_interval} seconds")
-        
+
         try:
             server = XMLTVServer(config)
             server.run()
@@ -66,5 +63,5 @@ def main():
             return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())
