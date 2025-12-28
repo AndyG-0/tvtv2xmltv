@@ -10,14 +10,19 @@ Thank you for your interest in contributing to tvtv2xmltv! This document provide
    cd tvtv2xmltv
    ```
 
-2. **Install dependencies**
+2. **Install uv (if not already installed)**
    ```bash
-   pip install -r requirements-dev.txt
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-3. **Run tests**
+3. **Install dependencies**
    ```bash
-   PYTHONPATH=src pytest tests/ -v
+   uv pip install -e ".[dev]"
+   ```
+
+4. **Run tests**
+   ```bash
+   PYTHONPATH=src uv run pytest tests/ -v
    ```
 
 ## Code Style
@@ -32,13 +37,13 @@ Before submitting a PR, please run:
 
 ```bash
 # Format code
-black src/ tests/
+uv run black src/ tests/
 
 # Lint code
-flake8 src/ --max-line-length=127
+uv run flake8 src/ --max-line-length=100
 
 # Run tests with coverage
-PYTHONPATH=src pytest tests/ --cov=tvtv2xmltv --cov-report=term
+PYTHONPATH=src uv run pytest tests/ --cov=tvtv2xmltv --cov-report=term
 ```
 
 ## Testing

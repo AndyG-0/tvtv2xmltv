@@ -39,7 +39,7 @@ print()
 print("To run this example successfully:")
 print("  1. Find your lineup ID at https://www.tvtv.us/")
 print("  2. Update TVTV_LINEUP_ID above")
-print("  3. Run: python example_usage.py")
+print("  3. Run: uv run python example_usage.py")
 print()
 
 # Uncomment to actually run the conversion:

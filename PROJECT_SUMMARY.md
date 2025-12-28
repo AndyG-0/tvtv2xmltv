@@ -118,7 +118,13 @@ docker-compose up -d
 
 ### Using Python
 ```bash
-pip install -r requirements.txt
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv pip install -e .
+
+# Run the server
 export TVTV_LINEUP_ID=YOUR_LINEUP_ID
 python src/main.py --mode serve
 ```
@@ -173,8 +179,6 @@ tvtv2xmltv/
 ├── .dockerignore
 ├── .gitignore
 ├── .env.example
-├── requirements.txt
-├── requirements-dev.txt
 ├── setup.cfg
 ├── pyproject.toml
 ├── README.md

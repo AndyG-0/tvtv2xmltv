@@ -78,8 +78,11 @@ docker run -d \
 git clone https://github.com/AndyG-0/tvtv2xmltv.git
 cd tvtv2xmltv
 
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install dependencies
-pip install -r requirements.txt
+uv pip install -e .
 
 # Run the server
 export TVTV_LINEUP_ID=YOUR_LINEUP_ID
@@ -133,34 +136,36 @@ python src/main.py --mode convert --output guide.xml
 ### Setup
 
 ```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Install development dependencies
-pip install -r requirements-dev.txt
+uv pip install -e ".[dev]"
 
 # Run tests
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run with coverage
-pytest tests/ --cov=tvtv2xmltv --cov-report=html
+uv run pytest tests/ --cov=tvtv2xmltv --cov-report=html
 
 # Lint code
-flake8 src/
-black src/
+uv run flake8 src/
 
 # Format code
-black src/
+uv run black src/
 ```
 
 ### Running Tests
 
 ```bash
 # All tests
-pytest tests/ -v
+uv run pytest tests/ -v
 
 # Specific test file
-pytest tests/test_config.py -v
+uv run pytest tests/test_config.py -v
 
 # With coverage
-pytest tests/ --cov=tvtv2xmltv --cov-report=term --cov-report=html
+uv run pytest tests/ --cov=tvtv2xmltv --cov-report=term --cov-report=html
 ```
 
 ### Project Structure
@@ -188,8 +193,6 @@ tvtv2xmltv/
 │       └── docker.yml             # Docker build
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
-├── requirements-dev.txt
 ├── setup.cfg
 ├── pyproject.toml
 └── README.md
