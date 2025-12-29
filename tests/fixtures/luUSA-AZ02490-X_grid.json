@@ -1,0 +1,24 @@
+[
+  [
+    {
+      "programId": "EP000000060150",
+      "title": "Local News",
+      "subtitle": "Evening Edition",
+      "startTime": "2025-12-28T20:00:00.000Z",
+      "duration": 1800,
+      "runTime": 30,
+      "type": "S",
+      "flags": ["HD", "Stereo"]
+    },
+    {
+      "programId": "EP000000060151",
+      "title": "Wheel of Fortune",
+      "subtitle": "Special Episode",
+      "startTime": "2025-12-28T20:30:00.000Z",
+      "duration": 1800,
+      "runTime": 30,
+      "type": "S",
+      "flags": ["HD", "New"]
+    }
+  ]
+]

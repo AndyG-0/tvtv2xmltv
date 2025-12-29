@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tvtv2xmltv"
+version = "1.0.0"
+description = "Convert TV listings from tvtv.us to XMLTV format"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "tvtv2xmltv contributors"}
+]
+keywords = ["tvtv", "xmltv", "tv guide", "epg"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "flask>=3.0.0",
+    "pytz>=2023.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pylint>=3.0.0",
+    "flake8>=6.1.0",
+    "black>=23.11.0",
+    "responses>=0.24.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tvtv2xmltv"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
