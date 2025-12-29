@@ -33,14 +33,14 @@ class Config:
             self.days = int(os.getenv("TVTV_DAYS", "8"))
         except ValueError:
             self.days = 8
-        
+
         self.output_file = os.getenv("TVTV_OUTPUT_FILE", "xmltv.xml")
-        
+
         try:
             self.update_interval = int(os.getenv("TVTV_UPDATE_INTERVAL", "3600"))
         except ValueError:
             self.update_interval = 3600
-        
+
         try:
             self.port = int(os.getenv("TVTV_PORT", "8080"))
         except ValueError:

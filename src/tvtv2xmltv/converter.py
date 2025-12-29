@@ -44,7 +44,7 @@ class TVTVConverter:
         for channel in lineup_data:
             if isinstance(channel, dict) and "stationId" in channel:
                 all_channels.append(channel["stationId"])
-        
+
         if not all_channels:
             raise ValueError("No valid stationId values found in lineup data")
 
