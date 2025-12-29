@@ -24,6 +24,7 @@ class XMLTVServer:
         self.update_lock = threading.Lock()
         self.update_thread = None
         self.running = False
+        self.lineup_files = {}  # Maps lineup_id to filename
 
         # Register routes
         self._register_routes()
@@ -33,30 +34,74 @@ class XMLTVServer:
 
         @self.app.route("/")
         def index():
-            """Serve the XMLTV file"""
-            if not os.path.exists(self.config.output_file):
-                return "XMLTV file not yet generated. Please wait...", 503
+            """Serve the primary XMLTV file or list available lineups"""
+            if len(self.config.lineups) == 1:
+                # Single lineup mode: serve the default file
+                lineup_id = self.config.lineups[0]
+                filename = self.lineup_files.get(lineup_id, self.config.output_file)
+
+                if not os.path.exists(filename):
+                    return "XMLTV file not yet generated. Please wait...", 503
+
+                return send_file(
+                    filename,
+                    mimetype="application/xml; charset=utf-8",
+                    as_attachment=False,
+                )
+            else:
+                # Multiple lineup mode: return a list of available endpoints
+                lineup_list = "\n".join(
+                    [f'<li><a href="/{lid}.xml">{lid}.xml</a></li>' for lid in self.config.lineups]
+                )
+                return (
+                    f"""
+                <html>
+                <head><title>XMLTV Lineups</title></head>
+                <body>
+                    <h1>Available XMLTV Lineups</h1>
+                    <ul>{lineup_list}</ul>
+                </body>
+                </html>
+                """,
+                    200,
+                )
+
+        @self.app.route("/<lineup_id>.xml")
+        def serve_lineup(lineup_id):
+            """Serve a specific lineup's XMLTV file"""
+            if lineup_id not in self.config.lineups:
+                return f"Lineup '{lineup_id}' not configured", 404
+
+            filename = self.lineup_files.get(lineup_id, f"{lineup_id}.xml")
+
+            if not os.path.exists(filename):
+                return f"XMLTV file for lineup '{lineup_id}' not yet generated. Please wait...", 503
 
             return send_file(
-                self.config.output_file,
-                mimetype="text/xml",
-                as_attachment=True,
-                download_name=f'xmltv_{time.strftime("%Y%m%d")}.xml',
+                filename,
+                mimetype="application/xml; charset=utf-8",
+                as_attachment=False,
             )
 
         @self.app.route("/xmltv.xml")
         def xmltv():
-            """Alternative endpoint for XMLTV file"""
+            """Alternative endpoint for XMLTV file (single lineup compatibility)"""
             return index()
 
         @self.app.route("/health")
         def health():
             """Health check endpoint"""
+            files_exist = all(
+                os.path.exists(self.lineup_files.get(lid, f"{lid}.xml"))
+                for lid in self.config.lineups
+            )
+
             return jsonify(
                 {
                     "status": "healthy",
                     "last_update": self.last_update.isoformat() if self.last_update else None,
-                    "file_exists": os.path.exists(self.config.output_file),
+                    "lineups": self.config.lineups,
+                    "files_exist": files_exist,
                 }
             )
 
@@ -68,19 +113,38 @@ class XMLTVServer:
                 {
                     "status": "updated",
                     "last_update": self.last_update.isoformat() if self.last_update else None,
+                    "lineups": self.config.lineups,
                 }
             )
 
     def _update_xmltv(self):
-        """Update the XMLTV file"""
+        """Update the XMLTV files for all lineups"""
         with self.update_lock:
             try:
-                print(f"Updating XMLTV file: {self.config.output_file}")
-                self.converter.save_to_file()
+                if len(self.config.lineups) == 1:
+                    print(f"Updating XMLTV file: {self.config.output_file}")
+                else:
+                    print(f"Updating XMLTV files for lineups: {', '.join(self.config.lineups)}")
+
+                saved_files = self.converter.save_to_file()
+
+                # Update the lineup_files mapping
+                for i, lineup_id in enumerate(self.config.lineups):
+                    self.lineup_files[lineup_id] = saved_files[i]
+
                 self.last_update = datetime.now()
-                print(f"XMLTV file updated successfully at {self.last_update}")
-            except Exception as e:
-                print(f"Error updating XMLTV file: {e}")
+
+                if len(saved_files) == 1:
+                    print(
+                        f"XMLTV file updated successfully at {self.last_update}: "
+                        f"{saved_files[0]}"
+                    )
+                else:
+                    print(f"XMLTV files updated successfully at {self.last_update}")
+                    for f in saved_files:
+                        print(f"  - {f}")
+            except Exception as e:  # pylint: disable=broad-except
+                print(f"Error updating XMLTV file(s): {e}")
 
     def _update_loop(self):
         """Background loop that periodically updates the XMLTV file"""

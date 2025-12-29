@@ -1,0 +1,24 @@
+[
+  [
+    {
+      "programId": "EP000000060140",
+      "title": "PBS NewsHour",
+      "subtitle": "December 28, 2025",
+      "startTime": "2025-12-28T20:00:00.000Z",
+      "duration": 3600,
+      "runTime": 60,
+      "type": "S",
+      "flags": ["HD", "Stereo"]
+    },
+    {
+      "programId": "EP000000060141",
+      "title": "NOVA",
+      "subtitle": "Secrets of the Sky",
+      "startTime": "2025-12-28T21:00:00.000Z",
+      "duration": 3600,
+      "runTime": 60,
+      "type": "S",
+      "flags": ["HD", "New"]
+    }
+  ]
+]

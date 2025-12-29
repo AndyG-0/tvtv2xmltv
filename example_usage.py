@@ -24,7 +24,7 @@ print()
 # Create configuration
 config = Config()
 print(f"Configuration:")
-print(f"  Lineup ID: {config.lineup_id}")
+print(f"  Lineups: {', '.join(config.lineups)}")
 print(f"  Timezone: {config.timezone}")
 print(f"  Days: {config.days}")
 print(f"  Output File: {config.output_file}")

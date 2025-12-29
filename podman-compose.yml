@@ -14,6 +14,7 @@ services:
       - TVTV_UPDATE_INTERVAL=${TVTV_UPDATE_INTERVAL:-3600}
       - TVTV_PORT=8080
       - TVTV_HOST=0.0.0.0
+      - TVTV_MOCK_MODE=${TVTV_MOCK_MODE:-false}
     volumes:
       - xmltv-data:/data
     restart: unless-stopped

@@ -31,9 +31,10 @@ class XMLTVGenerator:
         start_time = now.strftime("%Y-%m-%dT00:00:00.000Z")
 
         # XML header
-        lines.append('<?xml version="1.0" encoding="ISO-8859-1"?>')
+        lines.append('<?xml version="1.0" encoding="UTF-8"?>')
         lines.append(
-            f'<tv date="{start_time}" source-info-url="{escape(source_url)}" source-info-name="tvtv2xmltv">'
+            f'<tv date="{start_time}" source-info-url="{escape(source_url)}" '
+            f'source-info-name="tvtv2xmltv">'
         )
 
         # Add channels
@@ -85,7 +86,8 @@ class XMLTVGenerator:
 
         lines = []
         lines.append(
-            f'<programme start="{start_str}" stop="{end_str}" duration="{duration}" channel="{channel_num}">'
+            f'<programme start="{start_str}" stop="{end_str}" '
+            f'duration="{duration}" channel="{channel_num}">'
         )
         lines.append(f'<title lang="en">{title}</title>')
 

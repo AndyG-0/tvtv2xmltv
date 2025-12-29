@@ -9,6 +9,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # Copy project files
 COPY pyproject.toml .
 COPY src/ ./src/
+COPY tests/fixtures/ ./tests/fixtures/
 
 # Install dependencies using uv (without the package itself)
 RUN uv pip install --system --no-cache requests flask python-dateutil pytz

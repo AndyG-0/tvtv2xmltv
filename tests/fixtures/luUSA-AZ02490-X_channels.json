@@ -1,0 +1,26 @@
+[
+  {
+    "channelNumber": "3.1",
+    "stationId": 10209,
+    "stationCallSign": "KTVK",
+    "logo": "https://s3.amazonaws.com/schedulesdirect/assets/stationLogos/s10209_h3_aa.png"
+  },
+  {
+    "channelNumber": "5.1",
+    "stationId": 10098,
+    "stationCallSign": "KPHO",
+    "logo": "https://s3.amazonaws.com/schedulesdirect/assets/stationLogos/s10098_h3_aa.png"
+  },
+  {
+    "channelNumber": "10.1",
+    "stationId": 10222,
+    "stationCallSign": "KSAZ",
+    "logo": "https://s3.amazonaws.com/schedulesdirect/assets/stationLogos/s10222_h3_aa.png"
+  },
+  {
+    "channelNumber": "12.1",
+    "stationId": 10139,
+    "stationCallSign": "KPNX",
+    "logo": "https://s3.amazonaws.com/schedulesdirect/assets/stationLogos/s10139_h3_aa.png"
+  }
+]

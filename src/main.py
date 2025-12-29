@@ -29,24 +29,29 @@ def main():
         converter = TVTVConverter(config)
         output_file = args.output or config.output_file
 
-        print(f"Converting TVTV data to XMLTV format...")
-        print(f"Lineup ID: {config.lineup_id}")
+        print("Converting TVTV data to XMLTV format...")
+        print(f"Lineups: {', '.join(config.lineups)}")
         print(f"Timezone: {config.timezone}")
         print(f"Days: {config.days}")
 
         try:
-            result = converter.save_to_file(output_file)
-            print(f"XMLTV file saved to: {result}")
+            result_files = converter.save_to_file(output_file)
+            if len(result_files) == 1:
+                print(f"XMLTV file saved to: {result_files[0]}")
+            else:
+                print("XMLTV files saved:")
+                for f in result_files:
+                    print(f"  - {f}")
             return 0
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             print(f"Error: {e}", file=sys.stderr)
             return 1
     else:
         # Server mode
-        print(f"Starting XMLTV server...")
+        print("Starting XMLTV server...")
         print(f"Host: {config.host}")
         print(f"Port: {config.port}")
-        print(f"Lineup ID: {config.lineup_id}")
+        print(f"Lineups: {', '.join(config.lineups)}")
         print(f"Timezone: {config.timezone}")
         print(f"Days: {config.days}")
         print(f"Update interval: {config.update_interval} seconds")
@@ -58,7 +63,7 @@ def main():
         except KeyboardInterrupt:
             print("\nShutting down...")
             return 0
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
