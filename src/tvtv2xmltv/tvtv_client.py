@@ -42,7 +42,6 @@ class TVTVClient:
                 if attempt == self.max_retries - 1:
                     raise
                 time.sleep(self.retry_delay * (attempt + 1))
-        return None
 
     def get_lineup_channels(self):
         """Fetch channel lineup data"""

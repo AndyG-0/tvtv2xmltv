@@ -39,8 +39,14 @@ class TVTVConverter:
         if not lineup_data:
             raise ValueError(f"Failed to fetch lineup data for {lineup_id}")
 
-        # Extract station IDs for grid queries
-        all_channels = [channel["stationId"] for channel in lineup_data]
+        # Extract station IDs for grid queries with validation
+        all_channels = []
+        for channel in lineup_data:
+            if isinstance(channel, dict) and "stationId" in channel:
+                all_channels.append(channel["stationId"])
+        
+        if not all_channels:
+            raise ValueError("No valid stationId values found in lineup data")
 
         # Fetch grid data for each day
         listings_by_day = []

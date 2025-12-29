@@ -5,7 +5,7 @@ HTTP server module for serving XMLTV files
 import os
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Flask, send_file, jsonify
 from .converter import TVTVConverter
 from .config import Config
@@ -132,7 +132,7 @@ class XMLTVServer:
                 for i, lineup_id in enumerate(self.config.lineups):
                     self.lineup_files[lineup_id] = saved_files[i]
 
-                self.last_update = datetime.now()
+                self.last_update = datetime.now(timezone.utc)
 
                 if len(saved_files) == 1:
                     print(

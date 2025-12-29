@@ -50,7 +50,7 @@ PYTHONPATH=src uv run pytest tests/ --cov=tvtv2xmltv --cov-report=term
 
 - Write tests for all new features
 - Ensure all tests pass before submitting a PR
-- Maintain or improve code coverage (currently at 78%)
+- Maintain or improve code coverage
 - Tests are located in the `tests/` directory
 
 ## Pull Request Process

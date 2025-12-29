@@ -57,13 +57,6 @@ def test_converter_full_flow(test_config):
         ]
     ]
 
-    responses.add_callback(
-        responses.GET,
-        "https://www.tvtv.us/api/v1/lineup/USA-TEST12345/grid/",
-        callback=lambda req: (200, {}, str(grid_data).replace("'", '"')),
-        content_type="application/json",
-    )
-
     responses.add(
         responses.GET,
         re.compile(r"https://www.tvtv.us/api/v1/lineup/USA-TEST12345/grid/.*"),

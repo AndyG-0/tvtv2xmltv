@@ -28,10 +28,23 @@ class Config:
         # Keep `lineup_id` attribute for compatibility with existing code/tests
         self.lineup_id = self.lineups[0]
 
-        self.days = int(os.getenv("TVTV_DAYS", "8"))
+        # Parse integer environment variables with validation
+        try:
+            self.days = int(os.getenv("TVTV_DAYS", "8"))
+        except ValueError:
+            self.days = 8
+        
         self.output_file = os.getenv("TVTV_OUTPUT_FILE", "xmltv.xml")
-        self.update_interval = int(os.getenv("TVTV_UPDATE_INTERVAL", "3600"))
-        self.port = int(os.getenv("TVTV_PORT", "8080"))
+        
+        try:
+            self.update_interval = int(os.getenv("TVTV_UPDATE_INTERVAL", "3600"))
+        except ValueError:
+            self.update_interval = 3600
+        
+        try:
+            self.port = int(os.getenv("TVTV_PORT", "8080"))
+        except ValueError:
+            self.port = 8080
         # Binding to 0.0.0.0 is intentional for Docker/server deployment
         self.host = os.getenv("TVTV_HOST", "0.0.0.0")  # nosec B104
 

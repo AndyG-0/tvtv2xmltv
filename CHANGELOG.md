@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Testing
 - Unit tests for all major components
 - Integration tests
-- 78% code coverage
+- Comprehensive code coverage
 - Continuous integration with GitHub Actions
 
 [1.0.0]: https://github.com/AndyG-0/tvtv2xmltv/releases/tag/v1.0.0

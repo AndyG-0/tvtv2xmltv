@@ -9,7 +9,6 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from tvtv2xmltv.config import Config
-from tvtv2xmltv.converter import TVTVConverter
 
 # Example: Set environment variables
 os.environ["TVTV_LINEUP_ID"] = "USA-OTA30236"
@@ -52,3 +51,13 @@ print()
 #     sys.exit(1)
 
 print("(Conversion code commented out - uncomment to run)")
+
+# Uncomment below to run the conversion
+# from tvtv2xmltv.converter import TVTVConverter
+# try:
+#     converter = TVTVConverter(config)
+#     output_file = converter.save_to_file()
+#     print(f"✅ Success! XMLTV file saved to: {output_file}")
+# except Exception as e:
+#     print(f"❌ Error: {e}")
+#     sys.exit(1)
