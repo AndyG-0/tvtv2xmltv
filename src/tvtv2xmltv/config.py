@@ -51,6 +51,12 @@ class Config:
         # Mock mode for local testing without hitting the real API
         self.mock_mode = os.getenv("TVTV_MOCK_MODE", "false").lower() in ("true", "1", "yes")
 
+        # Base URL for stream URLs in XMLTV channels (optional)
+        self.stream_base_url = os.getenv("TVTV_STREAM_BASE_URL")
+
+        # External URL for source-info-url in XMLTV (optional, defaults to localhost)
+        self.external_url = os.getenv("TVTV_EXTERNAL_URL", f"http://localhost:{self.port}")
+
         # Validate days (max 8)
         if self.days > 8:
             self.days = 8

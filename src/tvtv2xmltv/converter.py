@@ -15,7 +15,7 @@ class TVTVConverter:
     def __init__(self, config):
         self.config = config
         # Don't create a single client here: each lineup has its own client
-        self.generator = XMLTVGenerator(config.timezone)
+        self.generator = XMLTVGenerator(config.timezone, config.stream_base_url)
 
     def convert_lineup(self, lineup_id):
         """
@@ -65,7 +65,7 @@ class TVTVConverter:
                 listings_by_day.append(day_listings)
 
         # Generate XMLTV
-        source_url = f"http://localhost:{self.config.port}/{lineup_id}.xml"
+        source_url = f"{self.config.external_url}/{lineup_id}.xml"
         xmltv_data = self.generator.generate(lineup_data, listings_by_day, source_url)
 
         return xmltv_data

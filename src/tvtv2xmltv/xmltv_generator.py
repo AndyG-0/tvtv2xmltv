@@ -10,9 +10,10 @@ import pytz
 class XMLTVGenerator:
     """Generate XMLTV format from TVTV data"""
 
-    def __init__(self, timezone="America/New_York"):
+    def __init__(self, timezone="America/New_York", stream_base_url=None):
         self.timezone = timezone
         self.tz = pytz.timezone(timezone)
+        self.stream_base_url = stream_base_url
 
     def generate(self, lineup_data, listings_by_day, source_url="http://localhost:8080"):
         """
@@ -57,11 +58,18 @@ class XMLTVGenerator:
         call_sign = escape(channel["stationCallSign"])
         logo = escape(f"https://www.tvtv.us{channel['logo']}")
 
+        url_part = ""
+        if self.stream_base_url:
+            # For HD Home Run, streams are at {base}/auto/v{channel}
+            stream_url = escape(f"{self.stream_base_url}/auto/v{channel_num}")
+            url_part = f'<url>{stream_url}</url>'
+
         return (
             f'<channel id="{channel_num}">'
             f"<display-name>{channel_num}</display-name>"
             f"<display-name>{call_sign}</display-name>"
             f'<icon src="{logo}" />'
+            f"{url_part}"
             f"</channel>"
         )
 
