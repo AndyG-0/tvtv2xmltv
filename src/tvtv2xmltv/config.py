@@ -12,6 +12,8 @@ class Config:
     Backwards-compatible with the single `TVTV_LINEUP_ID` env var.
     """
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self):
         self.timezone = os.getenv("TVTV_TIMEZONE", "America/New_York")
 
@@ -58,7 +60,4 @@ class Config:
         self.external_url = os.getenv("TVTV_EXTERNAL_URL", f"http://localhost:{self.port}")
 
         # Validate days (max 8)
-        if self.days > 8:
-            self.days = 8
-        if self.days < 1:
-            self.days = 1
+        self.days = max(1, min(self.days, 8))

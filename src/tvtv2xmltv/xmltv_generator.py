@@ -62,7 +62,7 @@ class XMLTVGenerator:
         if self.stream_base_url:
             # For HD Home Run, streams are at {base}/auto/v{channel}
             stream_url = escape(f"{self.stream_base_url}/auto/v{channel_num}")
-            url_part = f'<url>{stream_url}</url>'
+            url_part = f"<url>{stream_url}</url>"
 
         return (
             f'<channel id="{channel_num}">'
@@ -75,6 +75,7 @@ class XMLTVGenerator:
 
     def _generate_programme(self, program, channel):
         """Generate programme element"""
+        # pylint: disable=too-many-locals
         # Parse start time and convert to local timezone
         start_dt = datetime.fromisoformat(program["startTime"].replace("Z", "+00:00"))
         start_dt_local = start_dt.astimezone(self.tz)

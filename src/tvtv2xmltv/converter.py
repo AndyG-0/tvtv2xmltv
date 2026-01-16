@@ -3,6 +3,7 @@ Main converter module that orchestrates the conversion process
 """
 
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from .tvtv_client import TVTVClient
 from .mock_client import MockTVTVClient
@@ -27,6 +28,7 @@ class TVTVConverter:
         Returns:
             String containing XMLTV formatted data for this lineup
         """
+        # pylint: disable=too-many-locals
         # Use mock client if mock mode is enabled
         if self.config.mock_mode:
             print(f"[MOCK MODE] Using mock data for {lineup_id}")
@@ -77,8 +79,6 @@ class TVTVConverter:
         Returns:
             Dictionary mapping lineup_id to XMLTV formatted data string
         """
-        import time
-
         results = {}
         for i, lineup_id in enumerate(self.config.lineups):
             # Add delay between lineups to avoid rate limiting (except for first)

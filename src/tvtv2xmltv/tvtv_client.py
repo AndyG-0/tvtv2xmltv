@@ -17,6 +17,7 @@ class TVTVClient:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 
+    # pylint: disable=inconsistent-return-statements
     def _make_request(self, url):
         """Make HTTP request with retry logic and rate limit handling"""
         for attempt in range(self.max_retries):

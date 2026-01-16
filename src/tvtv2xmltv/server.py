@@ -14,6 +14,8 @@ from .config import Config
 class XMLTVServer:
     """HTTP server that serves XMLTV files and auto-updates them"""
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self, config=None):
         if config is None:
             config = Config()
@@ -48,13 +50,12 @@ class XMLTVServer:
                     mimetype="application/xml; charset=utf-8",
                     as_attachment=False,
                 )
-            else:
-                # Multiple lineup mode: return a list of available endpoints
-                lineup_list = "\n".join(
-                    [f'<li><a href="/{lid}.xml">{lid}.xml</a></li>' for lid in self.config.lineups]
-                )
-                return (
-                    f"""
+            # Multiple lineup mode: return a list of available endpoints
+            lineup_list = "\n".join(
+                [f'<li><a href="/{lid}.xml">{lid}.xml</a></li>' for lid in self.config.lineups]
+            )
+            return (
+                f"""
                 <html>
                 <head><title>XMLTV Lineups</title></head>
                 <body>
@@ -63,8 +64,8 @@ class XMLTVServer:
                 </body>
                 </html>
                 """,
-                    200,
-                )
+                200,
+            )
 
         @self.app.route("/<lineup_id>.xml")
         def serve_lineup(lineup_id):
