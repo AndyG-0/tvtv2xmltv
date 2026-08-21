@@ -1,10 +1,10 @@
 # tvtv2xmltv
 
-Convert TV listings from [tvtv.us](https://www.tvtv.us/) to XMLTV format and serve them via HTTP.
+Convert TV listings to XMLTV format and serve them via HTTP.
 
 ## Features
 
-- ✅ Fetches TV guide data from tvtv.us API
+- ✅ Fetches TV guide data from the free Gracenote/Zap2it grid API (up to 14 days)
 - ✅ Converts to standard XMLTV format
 - ✅ Built-in HTTP server to serve XMLTV files
 - ✅ Automatic periodic updates
@@ -57,9 +57,10 @@ Configure the application using environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `TVTV_TIMEZONE` | Timezone for guide data (see [tz database](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) | `America/New_York` |
-| `TVTV_LINEUPS` | Comma-separated list of TVTV lineup IDs (e.g., `USA-ONE,USA-TWO`). Each lineup will generate its own XMLTV file. | (optional) |
-| `TVTV_LINEUP_ID` | (Deprecated when `TVTV_LINEUPS` is set) Your TVTV lineup ID (find at [tvtv.us](https://www.tvtv.us/)) | `USA-OTA30236` |
-| `TVTV_DAYS` | Number of days to fetch (1-8) | `8` |
+| `TVTV_LINEUPS` | Comma-separated list of lineup IDs, each `{zipCode}_{headendId}` (e.g., `85142_OTA,85142_AZ02490`). Each lineup will generate its own XMLTV file. | (optional) |
+| `TVTV_LINEUP_ID` | (Deprecated when `TVTV_LINEUPS` is set) Your lineup ID, `{zipCode}_{headendId}` | `30236_OTA` |
+| `TVTV_DEFAULT_LINEUP` | With multiple `TVTV_LINEUPS`, which one is served at `/` (must be one of them). If unset, `/` shows a list until one is picked at runtime via `/list`. | (optional) |
+| `TVTV_DAYS` | Number of days to fetch (1-14) | `8` |
 | `TVTV_UPDATE_INTERVAL` | Update interval in seconds | `3600` |
 | `TVTV_PORT` | HTTP server port | `8080` |
 | `TVTV_HOST` | HTTP server host | `0.0.0.0` |
@@ -68,12 +69,21 @@ Configure the application using environment variables:
 
 ### Finding Your Lineup ID
 
-1. Visit [tvtv.us](https://www.tvtv.us/)
-2. Enter your location/zip code
-3. Select your TV provider
-4. The lineup ID will be in the URL (e.g., `USA-OTA30236`)
+Guide data comes from Gracenote's free TV listings API (the same source that powers
+[Zap2it](https://tvlistings.zap2it.com/) and [TVGuide.com](https://www.tvguide.com/)).
+A lineup ID is `{zipCode}_{headendId}`:
 
-**Multiple Lineups:** You can specify multiple lineup IDs using the `TVTV_LINEUPS` environment variable with a comma-separated list (e.g., `TVTV_LINEUPS=USA-OTA30236,USA-OTA90210`). Each lineup will generate its own XMLTV file and be accessible at `/<lineup-id>.xml` (e.g., `/USA-OTA30236.xml`, `/USA-OTA90210.xml`).
+1. For local over-the-air broadcast channels, use the `OTA` sentinel: `85142_OTA`.
+2. For a specific cable/satellite provider, look up its headend ID for your zip code:
+   ```bash
+   curl 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/USA/85142/gapzap/en'
+   ```
+   This returns a `Providers` array; each entry's `headendId` combined with your zip
+   code is a valid lineup ID, e.g. `headendId: "AZ02490"` → `85142_AZ02490`.
+
+**Multiple Lineups:** You can specify multiple lineup IDs using the `TVTV_LINEUPS` environment variable with a comma-separated list (e.g., `TVTV_LINEUPS=85142_OTA,85142_AZ02490`). Each lineup will generate its own XMLTV file and be accessible at `/<lineup-id>.xml` (e.g., `/85142_OTA.xml`, `/85142_AZ02490.xml`). The full list of lineups (with links) is always available at `/list`.
+
+**Default Lineup:** With multiple lineups configured, `/` shows the list at `/list` until a default is chosen — either via `TVTV_DEFAULT_LINEUP` (e.g., `TVTV_DEFAULT_LINEUP=85142_OTA`) or by clicking "set as default" next to a lineup on the `/list` page. Once set, `/` serves that lineup's XMLTV file directly, saving you from typing `/<lineup-id>.xml` into other systems. A runtime pick (via `/list`) is persisted and survives restarts; the env var, if set, always takes precedence.
 
 ### Mock Mode for Testing
 
@@ -81,7 +91,7 @@ To test the application without hitting the real API (useful during development)
 
 ```bash
 export TVTV_MOCK_MODE=true
-export TVTV_LINEUPS=luUSA-OTA85142,luUSA-AZ02490-X
+export TVTV_LINEUPS=85142_OTA,85142_AZ02490
 ./run_server_mock.sh
 ```
 
@@ -245,13 +255,13 @@ tvtv2xmltv/
 │   └── tvtv2xmltv/
 │       ├── __init__.py
 │       ├── config.py              # Configuration management
-│       ├── tvtv_client.py         # TVTV API client
+│       ├── gracenote_client.py    # Gracenote grid API client
 │       ├── xmltv_generator.py     # XMLTV format generator
 │       ├── converter.py           # Main conversion logic
 │       └── server.py              # HTTP server
 ├── tests/
 │   ├── test_config.py
-│   ├── test_tvtv_client.py
+│   ├── test_gracenote_client.py
 │   ├── test_xmltv_generator.py
 │   ├── test_converter.py
 │   └── test_server.py
@@ -276,9 +286,11 @@ tvtv2xmltv/
 - `GET /update` - Manually trigger XMLTV update
 
 ### Multiple Lineup Mode
-- `GET /` - List available lineups (HTML page with links)
+- `GET /` - Download the default lineup's XMLTV file (if `TVTV_DEFAULT_LINEUP` is set or one was picked via `/list`); otherwise, list available lineups (same as `/list`)
+- `GET /list` - List available lineups (HTML page with links, and a "set as default" link per lineup)
+- `GET /set-default/<lineup-id>` - Pick which lineup is served at `/` (persisted across restarts)
 - `GET /<lineup-id>.xml` - Download XMLTV file for specific lineup (e.g., `/USA-OTA30236.xml`)
-- `GET /health` - Health check (returns JSON with status and lineup list)
+- `GET /health` - Health check (returns JSON with status, lineup list, and current default lineup)
 - `GET /update` - Manually trigger XMLTV update for all lineups
 
 ## XMLTV Format
@@ -302,7 +314,7 @@ If you're getting connection errors:
 ### Empty Guide Data
 
 If the XMLTV file is empty:
-1. Verify your lineup ID at tvtv.us
+1. Verify your lineup ID's headend exists for your zip code (see "Finding Your Lineup ID" above)
 2. Check the logs for error messages
 3. Try reducing the number of days
 
@@ -355,7 +367,7 @@ Based on the original PHP implementation by [idolpx](https://gist.github.com/ido
 ## Related Projects
 
 - [XMLTV](http://xmltv.org/) - Original XMLTV project
-- [tvtv.us](https://www.tvtv.us/) - TV guide data source
+- [Zap2it](https://tvlistings.zap2it.com/) - Guide data source (Gracenote grid API)
 
 ## Support
 

@@ -5,7 +5,7 @@ Main converter module that orchestrates the conversion process
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from .tvtv_client import TVTVClient
+from .gracenote_client import GracenoteClient
 from .mock_client import MockTVTVClient
 from .xmltv_generator import XMLTVGenerator
 
@@ -34,7 +34,7 @@ class TVTVConverter:
             print(f"[MOCK MODE] Using mock data for {lineup_id}")
             client = MockTVTVClient(lineup_id)
         else:
-            client = TVTVClient(lineup_id)
+            client = GracenoteClient.from_lineup_id(lineup_id)
 
         # Get channel lineup
         lineup_data = client.get_lineup_channels()

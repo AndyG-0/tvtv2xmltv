@@ -56,7 +56,7 @@ class XMLTVGenerator:
         """Generate channel element"""
         channel_num = escape(str(channel["channelNumber"]))
         call_sign = escape(channel["stationCallSign"])
-        logo = escape(f"https://www.tvtv.us{channel['logo']}")
+        logo = escape(channel["logo"])
 
         url_part = ""
         if self.stream_base_url:

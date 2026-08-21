@@ -38,11 +38,10 @@ if [ ! -f .env ]; then
     cp .env.example .env
     echo "⚠️  Please edit .env file to set your TVTV_LINEUP_ID before running!"
     echo ""
-    echo "To find your lineup ID:"
-    echo "  1. Visit https://www.tvtv.us/"
-    echo "  2. Enter your location"
-    echo "  3. Select your TV provider"
-    echo "  4. The lineup ID will be in the URL (e.g., USA-OTA30236)"
+    echo "To find your lineup ID (format: {zipCode}_{headendId}):"
+    echo "  - For local broadcast: {yourZip}_OTA (e.g., 85142_OTA)"
+    echo "  - For a specific provider, look up its headendId:"
+    echo "    curl 'https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/getPostalCodeProviders/USA/{yourZip}/gapzap/en'"
     echo ""
     read -p "Press Enter to edit .env file now (or Ctrl+C to exit)..."
     ${EDITOR:-nano} .env

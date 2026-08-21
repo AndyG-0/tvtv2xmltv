@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "tvtv2xmltv"
 version = "1.0.0"
-description = "Convert TV listings from tvtv.us to XMLTV format"
+description = "Convert TV listings to XMLTV format"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}

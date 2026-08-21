@@ -2,20 +2,24 @@
 Integration tests for the converter
 """
 
-import re
-
 import pytest
 import responses
 from tvtv2xmltv.config import Config
 from tvtv2xmltv.converter import TVTVConverter
+
+PROVIDERS_URL = (
+    "https://tvlistings.gracenote.com/gapzap_webapi/api/Providers/"
+    "getPostalCodeProviders/USA/12345/gapzap/en"
+)
+GRID_URL = "https://tvlistings.gracenote.com/api/grid"
 
 
 @pytest.fixture
 def test_config():
     """Create a test configuration"""
     config = Config()
-    config.lineup_id = "USA-TEST12345"
-    config.lineups = ["USA-TEST12345"]
+    config.lineup_id = "12345_OTA"
+    config.lineups = ["12345_OTA"]
     config.days = 1
     config.output_file = "/tmp/test_xmltv.xml"
     return config
@@ -24,54 +28,59 @@ def test_config():
 @responses.activate
 def test_converter_full_flow(test_config):
     """Test full conversion flow"""
-    # Mock lineup data
-    lineup_data = [
-        {
-            "channelNumber": "2.1",
-            "stationId": 12345,
-            "stationCallSign": "WABC",
-            "logo": "/path/to/logo.png",
-        }
-    ]
-
     responses.add(
         responses.GET,
-        "https://www.tvtv.us/api/v1/lineup/USA-TEST12345/channels",
-        json=lineup_data,
+        PROVIDERS_URL,
+        json={
+            "Providers": [
+                {
+                    "type": "OTA",
+                    "device": "",
+                    "lineupId": "USA-lineupId-DEFAULT",
+                    "headendId": "lineupId",
+                    "postalCode": "12345",
+                }
+            ]
+        },
         status=200,
     )
 
-    # Mock grid data - need to match the actual API call pattern
-    grid_data = [
-        [
+    grid_data = {
+        "channels": [
             {
-                "programId": "PR123",
-                "title": "Test Show",
-                "subtitle": "Test Episode",
-                "startTime": "2023-05-23T20:00:00.000Z",
-                "duration": 1800,
-                "runTime": 30,
-                "type": "S",
-                "flags": ["HD", "New"],
+                "callSign": "WABC",
+                "channelId": "12345",
+                "channelNo": "2.1",
+                "thumbnail": "//example.com/logo.png",
+                "events": [
+                    {
+                        "startTime": "2023-05-23T20:00:00Z",
+                        "duration": "30",
+                        "filter": ["filter-news"],
+                        "flag": ["New"],
+                        "tags": [],
+                        "program": {
+                            "title": "Test Show",
+                            "id": "PR123",
+                            "tmsId": "PR123",
+                            "episodeTitle": "Test Episode",
+                        },
+                    }
+                ],
             }
         ]
-    ]
+    }
 
-    responses.add(
-        responses.GET,
-        re.compile(r"https://www.tvtv.us/api/v1/lineup/USA-TEST12345/grid/.*"),
-        json=grid_data,
-        status=200,
-    )
+    responses.add(responses.GET, GRID_URL, json=grid_data, status=200)
 
     converter = TVTVConverter(test_config)
     result_dict = converter.convert()
 
     # Result should be a dict with lineup_id as key
     assert isinstance(result_dict, dict)
-    assert "USA-TEST12345" in result_dict
+    assert "12345_OTA" in result_dict
 
-    result = result_dict["USA-TEST12345"]
+    result = result_dict["12345_OTA"]
     assert '<?xml version="1.0" encoding="UTF-8"?>' in result
     assert '<channel id="2.1">' in result
     assert "WABC" in result

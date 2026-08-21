@@ -15,13 +15,17 @@ def generator():
 def test_generate_channel():
     """Test channel generation"""
     gen = XMLTVGenerator()
-    channel = {"channelNumber": "2.1", "stationCallSign": "WABC", "logo": "/path/to/logo.png"}
+    channel = {
+        "channelNumber": "2.1",
+        "stationCallSign": "WABC",
+        "logo": "https://example.com/path/to/logo.png",
+    }
 
     result = gen._generate_channel(channel)
     assert '<channel id="2.1">' in result
     assert "<display-name>2.1</display-name>" in result
     assert "<display-name>WABC</display-name>" in result
-    assert "https://www.tvtv.us/path/to/logo.png" in result
+    assert "https://example.com/path/to/logo.png" in result
 
 
 def test_generate_programme():

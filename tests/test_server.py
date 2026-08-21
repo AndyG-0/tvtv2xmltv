@@ -3,6 +3,7 @@ Tests for the HTTP server
 """
 
 import os
+import time
 
 import pytest
 from tvtv2xmltv.server import XMLTVServer
@@ -19,6 +20,21 @@ def test_config():
     config.output_file = "/tmp/test_server_xmltv.xml"
     config.port = 8888
     config.update_interval = 10
+    config.default_lineup = None
+    return config
+
+
+@pytest.fixture
+def multi_lineup_config(tmp_path):
+    """Create a test configuration with multiple lineups"""
+    config = Config()
+    config.lineup_id = "USA-ONE"
+    config.lineups = ["USA-ONE", "USA-TWO"]
+    config.days = 1
+    config.output_file = str(tmp_path / "xmltv.xml")
+    config.port = 8888
+    config.update_interval = 10
+    config.default_lineup = None
     return config
 
 
@@ -41,6 +57,8 @@ def test_server_routes(test_config):
     assert "/xmltv.xml" in rules
     assert "/health" in rules
     assert "/update" in rules
+    assert "/list" in rules
+    assert "/set-default/<lineup_id>" in rules
 
 
 def test_health_endpoint_no_file(test_config):
@@ -84,3 +102,103 @@ def test_index_serves_xml_inline(test_config, tmp_path):
     assert "inline" in cd
     # Body should contain the XML declaration and content
     assert response.get_data(as_text=True).startswith("<?xml")
+
+
+def test_root_lists_lineups_when_no_default(multi_lineup_config):
+    """With no default set, '/' should show the listing (today's behavior)"""
+    server = XMLTVServer(multi_lineup_config)
+    client = server.app.test_client()
+
+    response = client.get("/")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "USA-ONE.xml" in body
+    assert "USA-TWO.xml" in body
+
+
+def test_list_endpoint_always_shows_listing(multi_lineup_config, tmp_path):
+    """'/list' should show the listing even when a default is set"""
+    xml_path = tmp_path / "one.xml"
+    xml_path.write_text("<?xml version='1.0'?><tv></tv>", encoding="utf-8")
+
+    multi_lineup_config.default_lineup = "USA-ONE"
+    server = XMLTVServer(multi_lineup_config)
+    server.lineup_files["USA-ONE"] = str(xml_path)
+    client = server.app.test_client()
+
+    response = client.get("/list")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "USA-ONE.xml" in body
+    assert "USA-TWO.xml" in body
+
+
+def test_root_serves_env_default_lineup(multi_lineup_config, tmp_path):
+    """With TVTV_DEFAULT_LINEUP-equivalent config set, '/' serves that file"""
+    xml_path = tmp_path / "one.xml"
+    xml_path.write_text("<?xml version='1.0'?><tv></tv>", encoding="utf-8")
+
+    multi_lineup_config.default_lineup = "USA-ONE"
+    server = XMLTVServer(multi_lineup_config)
+    server.lineup_files["USA-ONE"] = str(xml_path)
+    client = server.app.test_client()
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers.get("Content-Type", "").startswith("application/xml")
+
+
+def test_set_default_persists_and_serves(multi_lineup_config, tmp_path):
+    """Picking a default via /set-default should persist and affect '/'"""
+    xml_path = tmp_path / "two.xml"
+    xml_path.write_text("<?xml version='1.0'?><tv></tv>", encoding="utf-8")
+
+    server = XMLTVServer(multi_lineup_config)
+    server.lineup_files["USA-TWO"] = str(xml_path)
+    client = server.app.test_client()
+
+    response = client.get("/set-default/USA-TWO")
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/"
+    assert os.path.exists(server._default_lineup_state_path())
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers.get("Content-Type", "").startswith("application/xml")
+
+    # A fresh server instance should pick up the persisted default
+    server2 = XMLTVServer(multi_lineup_config)
+    assert server2.runtime_default_lineup == "USA-TWO"
+
+
+def test_set_default_invalid_lineup_404(multi_lineup_config):
+    """Picking an unconfigured lineup as default should 404"""
+    server = XMLTVServer(multi_lineup_config)
+    client = server.app.test_client()
+
+    response = client.get("/set-default/NOT-A-LINEUP")
+    assert response.status_code == 404
+
+
+def test_update_loop_has_no_initial_call(test_config, monkeypatch):
+    """_update_loop should not call _update_xmltv before its first sleep
+
+    (the initial fetch now happens once, synchronously, in run())
+    """
+    server = XMLTVServer(test_config)
+    server.config.update_interval = 0
+    calls = []
+    monkeypatch.setattr(server, "_update_xmltv", lambda: calls.append(True))
+
+    server.running = True
+    sleep_calls = []
+
+    def fake_sleep(_seconds):
+        sleep_calls.append(True)
+        if len(sleep_calls) >= 2:
+            server.running = False
+
+    monkeypatch.setattr(time, "sleep", fake_sleep)
+    server._update_loop()
+
+    assert calls == [True]

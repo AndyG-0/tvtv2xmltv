@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-12-28
+## [Unreleased] - 2026-08-20
+
+### Changed
+- **Replaced the tvtv.us backend with Gracenote's free consumer grid API**
+  (`tvlistings.gracenote.com`, the same backend behind Zap2it.com/TVGuide.com),
+  since tvtv.us discontinued its public API (`/api/v1/...` routes now 404;
+  the site's current guide is served through a session-bound internal API that
+  isn't practical to replicate).
+- Lineup IDs now use the format `{zipCode}_{headendId}` (e.g. `85142_OTA` for
+  local broadcast, `85142_AZ02490` for a specific cable/satellite provider)
+  instead of tvtv.us's opaque lineup IDs.
+- Raised `TVTV_DAYS` max from 8 to 14, matching Gracenote's available guide
+  window (previously capped by tvtv.us).
 
 ### Added
 - Support for multiple lineup configurations via `TVTV_LINEUPS` (comma-separated list)

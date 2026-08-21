@@ -24,8 +24,8 @@ def test_config_defaults():
     config = Config()
     assert config.timezone == "America/New_York"
     # Default lineup should be available as both `lineup_id` and in `lineups` list
-    assert config.lineup_id == "USA-OTA30236"
-    assert config.lineups == ["USA-OTA30236"]
+    assert config.lineup_id == "30236_OTA"
+    assert config.lineups == ["30236_OTA"]
     assert config.days == 8
     assert config.output_file == "xmltv.xml"
     assert config.update_interval == 3600
@@ -75,11 +75,38 @@ def test_config_lineups_parsing():
     os.environ.pop("TVTV_LINEUPS", None)
 
 
-def test_config_days_validation():
-    """Test that days is capped at 8"""
-    os.environ["TVTV_DAYS"] = "10"
+def test_config_default_lineup_valid():
+    """A TVTV_DEFAULT_LINEUP matching a configured lineup is accepted"""
+    os.environ["TVTV_LINEUPS"] = "USA-ONE,USA-TWO"
+    os.environ["TVTV_DEFAULT_LINEUP"] = "USA-TWO"
     config = Config()
-    assert config.days == 8
+    assert config.default_lineup == "USA-TWO"
+    os.environ.pop("TVTV_LINEUPS", None)
+    os.environ.pop("TVTV_DEFAULT_LINEUP", None)
+
+
+def test_config_default_lineup_invalid():
+    """A TVTV_DEFAULT_LINEUP not in the configured lineups is ignored"""
+    os.environ["TVTV_LINEUPS"] = "USA-ONE,USA-TWO"
+    os.environ["TVTV_DEFAULT_LINEUP"] = "USA-THREE"
+    config = Config()
+    assert config.default_lineup is None
+    os.environ.pop("TVTV_LINEUPS", None)
+    os.environ.pop("TVTV_DEFAULT_LINEUP", None)
+
+
+def test_config_default_lineup_unset():
+    """TVTV_DEFAULT_LINEUP is None when not set"""
+    os.environ.pop("TVTV_DEFAULT_LINEUP", None)
+    config = Config()
+    assert config.default_lineup is None
+
+
+def test_config_days_validation():
+    """Test that days is capped at 14"""
+    os.environ["TVTV_DAYS"] = "20"
+    config = Config()
+    assert config.days == 14
 
     os.environ["TVTV_DAYS"] = "0"
     config = Config()
