@@ -90,6 +90,23 @@ PYTHONPATH=src uv run pytest tests/ --cov=tvtv2xmltv --cov-report=term
 - Follow the existing code style
 - Keep changes focused and atomic
 
+## Release Process
+
+Maintainers can release new versions using `release.sh`, which runs pre-release checks, synchronizes project versions, builds and smoke-tests container images, tags image variants (`X.Y.Z`, `vX.Y.Z`, `X.Y`, `X`, `latest`), pushes to the container registry, and tags the Git release:
+
+```bash
+# Dry run preview
+./release.sh --dry-run
+
+# Release patch / minor / major bump
+./release.sh --patch
+./release.sh --minor
+./release.sh --major
+
+# Release explicit version
+./release.sh 1.1.0
+```
+
 ## Reporting Bugs
 
 If you find a bug, please open an issue with:

@@ -349,6 +349,29 @@ podman-compose restart
 podman-compose up -d --build
 ```
 
+## Releasing
+
+To create a new release, tag the Docker/Podman container image, and push both the container image and Git tag, use the included release script:
+
+```bash
+# Preview release actions without making changes
+./release.sh --dry-run
+
+# Release with a patch version bump (e.g., 1.0.0 -> 1.0.1)
+./release.sh --patch
+
+# Release with a minor version bump (e.g., 1.0.0 -> 1.1.0)
+./release.sh --minor
+
+# Release a specific version
+./release.sh 1.1.0
+
+# Build and tag locally without pushing
+./release.sh 1.1.0 --build-only
+```
+
+See `./release.sh --help` for all available options (custom registry, engine selection, skipping tests, etc.).
+
 ## Contributing
 
 Contributions are welcome! Please:
