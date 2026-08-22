@@ -31,6 +31,7 @@ ENV/
 .env.local
 .env.*.local
 .tvtv_default_lineup
+.gracenote_default_lineup
 
 # uv
 .uv/
@@ -54,9 +55,6 @@ htmlcov/
 # Output files
 *.xml
 xmltv/
-
-# Docker
-.dockerignore
 
 # OS
 .DS_Store

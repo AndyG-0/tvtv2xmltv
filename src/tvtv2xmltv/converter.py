@@ -10,6 +10,27 @@ from .mock_client import MockTVTVClient
 from .xmltv_generator import XMLTVGenerator
 
 
+def format_file_size(size_in_bytes):
+    """
+    Format a byte count into a human-readable string.
+
+    Args:
+        size_in_bytes: Size in bytes (int or None)
+
+    Returns:
+        Human-readable string, e.g. "2.4 MB", "512.0 KB", or "N/A"
+    """
+    if size_in_bytes is None:
+        return "N/A"
+    if size_in_bytes < 1024:
+        return f"{size_in_bytes} B"
+    if size_in_bytes < 1024 * 1024:
+        return f"{size_in_bytes / 1024:.1f} KB"
+    if size_in_bytes < 1024 * 1024 * 1024:
+        return f"{size_in_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_in_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
 class TVTVConverter:
     """Main converter class that coordinates fetching and conversion"""
 
@@ -46,9 +67,34 @@ class TVTVConverter:
                             dt_local = dt.astimezone(self.generator.tz)
                             dates_covered.add(dt_local.date())
                         except Exception:  # pylint: disable=broad-except
-                            dates_covered.add(start_time[:10])
+                            date_str = start_time[:10]
+                            try:
+                                dates_covered.add(datetime.fromisoformat(date_str).date())
+                            except Exception:
+                                dates_covered.add(date_str)
 
-        days_available = len(dates_covered)
+        # Sort dates
+        sorted_dates = []
+        for d in dates_covered:
+            if hasattr(d, "isoformat"):
+                sorted_dates.append(d.isoformat())
+            else:
+                sorted_dates.append(str(d))
+        sorted_dates.sort()
+
+        days_available = len(sorted_dates)
+        start_date = sorted_dates[0] if sorted_dates else None
+        end_date = sorted_dates[-1] if sorted_dates else None
+
+        if start_date and end_date:
+            if start_date == end_date:
+                date_range = start_date
+            else:
+                date_range = f"{start_date} to {end_date}"
+        else:
+            date_range = "N/A"
+
+        now_iso = datetime.now(timezone.utc).isoformat()
 
         return {
             "lineup_id": lineup_id,
@@ -56,8 +102,14 @@ class TVTVConverter:
             "days": days_available,
             "programs": total_programs,
             "days_requested": self.config.days,
+            "start_date": start_date,
+            "end_date": end_date,
+            "date_range": date_range,
+            "dates": sorted_dates,
+            "last_refreshed": now_iso,
             "file_path": None,
             "file_size_bytes": None,
+            "file_size_human": "N/A",
         }
 
     def get_stats(self, lineup_id=None):
@@ -182,7 +234,9 @@ class TVTVConverter:
 
             if lineup_id in self.stats:
                 self.stats[lineup_id]["file_path"] = abs_filename
-                self.stats[lineup_id]["file_size_bytes"] = os.path.getsize(abs_filename)
+                file_size = os.path.getsize(abs_filename)
+                self.stats[lineup_id]["file_size_bytes"] = file_size
+                self.stats[lineup_id]["file_size_human"] = format_file_size(file_size)
 
             saved_files.append(abs_filename)
         else:
@@ -198,7 +252,9 @@ class TVTVConverter:
 
                 if lineup_id in self.stats:
                     self.stats[lineup_id]["file_path"] = abs_filename
-                    self.stats[lineup_id]["file_size_bytes"] = os.path.getsize(abs_filename)
+                    file_size = os.path.getsize(abs_filename)
+                    self.stats[lineup_id]["file_size_bytes"] = file_size
+                    self.stats[lineup_id]["file_size_human"] = format_file_size(file_size)
 
                 saved_files.append(abs_filename)
 

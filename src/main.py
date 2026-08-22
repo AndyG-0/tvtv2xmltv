@@ -51,10 +51,15 @@ def main():
                     ch = stats.get("channels", 0)
                     days = stats.get("days", 0)
                     progs = stats.get("programs", 0)
+                    date_rng = stats.get("date_range", "N/A")
+                    f_size = stats.get("file_size_human", "N/A")
                     ch_str = f"{ch} channel" if ch == 1 else f"{ch} channels"
                     day_str = f"{days} day" if days == 1 else f"{days} days"
                     prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
-                    print(f"  - {lineup_id}: {ch_str}, {day_str} of guide available ({prog_str})")
+                    print(
+                        f"  - {lineup_id}: {ch_str}, {day_str} of guide [{date_rng}] "
+                        f"({prog_str}, {f_size})"
+                    )
             return 0
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error: {e}", file=sys.stderr)

@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+LABEL org.opencontainers.image.title="gracenote2xmltv" \
+      org.opencontainers.image.description="Convert Gracenote/Zap2it TV listings to XMLTV format and serve via HTTP" \
+      org.opencontainers.image.source="https://github.com/AndyG-0/tvtv2xmltv"
+
 # Set working directory
 WORKDIR /app
 
@@ -22,7 +26,12 @@ EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV GRACENOTE_OUTPUT_FILE=/data/xmltv.xml
 ENV TVTV_OUTPUT_FILE=/data/xmltv.xml
+ENV GRACENOTE_TIMEZONE=America/Phoenix
+ENV TVTV_TIMEZONE=America/Phoenix
+ENV GRACENOTE_LINEUPS=85142_OTA
+ENV TVTV_LINEUPS=85142_OTA
 ENV PYTHONPATH=/app/src
 
 # Health check
