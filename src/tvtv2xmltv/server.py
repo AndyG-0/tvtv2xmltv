@@ -133,8 +133,7 @@ class XMLTVServer:
             prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
             summary_info = f"{ch_str}, {day_str} of guide ({prog_str})"
 
-            cards.append(
-                f"""
+            cards.append(f"""
                 <div class="feed-card">
                     <div class="feed-header">
                         <div class="feed-title">
@@ -183,8 +182,7 @@ class XMLTVServer:
                         <span>Feed URL: <code class="code-inline">/{lid}.xml</code></span>
                     </div>
                 </div>
-                """
-            )
+                """)
 
         lineup_cards_html = "\n".join(cards)
 
