@@ -15,7 +15,7 @@
 
 1. **Black Formatter** (Code formatting):
    ```bash
-   uv run black src/ tests/ example_usage.py
+   uv run black src/ tests/
    ```
    - Line length: 100 characters
    - All Python files must be formatted with Black
@@ -47,8 +47,8 @@
 
 Run all linters in sequence:
 ```bash
-uv run black src/ tests/ example_usage.py && \
-uv run flake8 src/ tests/ example_usage.py --max-line-length=100 && \
+uv run black src/ tests/ && \
+uv run flake8 src/ tests/ --max-line-length=100 && \
 uv run pylint src/tvtv2xmltv/ --max-line-length=100
 ```
 

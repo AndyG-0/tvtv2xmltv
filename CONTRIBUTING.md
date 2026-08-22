@@ -50,10 +50,10 @@ You can also run specific checks individually:
 
 ```bash
 # Format code
-uv run black src/ tests/ example_usage.py
+uv run black src/ tests/
 
 # Lint code
-uv run flake8 src/ tests/ example_usage.py --max-line-length=100
+uv run flake8 src/ tests/ --max-line-length=100
 
 # Run pre-commit checks on all files
 uv run pre-commit run --all-files

@@ -2,6 +2,7 @@
 """
 Main entry point for tvtv2xmltv application
 """
+
 import sys
 import argparse
 from tvtv2xmltv.config import Config
