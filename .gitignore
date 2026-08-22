@@ -37,9 +37,11 @@ uv.lock
 *.swo
 *~
 
-# Testing
+# Testing and Reports
 .pytest_cache/
 .coverage
+coverage.xml
+bandit-report.json
 htmlcov/
 *.cover
 

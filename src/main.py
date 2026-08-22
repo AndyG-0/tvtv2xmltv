@@ -42,6 +42,18 @@ def main():
                 print("XMLTV files saved:")
                 for f in result_files:
                     print(f"  - {f}")
+
+            print("\nFeed Statistics:")
+            for lineup_id in config.lineups:
+                stats = converter.stats.get(lineup_id)
+                if stats:
+                    ch = stats.get("channels", 0)
+                    days = stats.get("days", 0)
+                    progs = stats.get("programs", 0)
+                    ch_str = f"{ch} channel" if ch == 1 else f"{ch} channels"
+                    day_str = f"{days} day" if days == 1 else f"{days} days"
+                    prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
+                    print(f"  - {lineup_id}: {ch_str}, {day_str} of guide available ({prog_str})")
             return 0
         except Exception as e:  # pylint: disable=broad-except
             print(f"Error: {e}", file=sys.stderr)

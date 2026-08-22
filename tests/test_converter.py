@@ -85,3 +85,70 @@ def test_converter_full_flow(test_config):
     assert '<channel id="2.1">' in result
     assert "WABC" in result
     assert "</tv>" in result
+
+    # Check stats
+    stats = converter.get_stats("12345_OTA")
+    assert stats is not None
+    assert stats["channels"] == 1
+    assert stats["days"] == 1
+    assert stats["programs"] == 1
+    assert stats["lineup_id"] == "12345_OTA"
+
+
+@responses.activate
+def test_converter_save_to_file_populates_stats(test_config, tmp_path):
+    """Test that save_to_file populates file_path and file_size_bytes in stats"""
+    responses.add(
+        responses.GET,
+        PROVIDERS_URL,
+        json={
+            "Providers": [
+                {
+                    "type": "OTA",
+                    "device": "",
+                    "lineupId": "USA-lineupId-DEFAULT",
+                    "headendId": "lineupId",
+                    "postalCode": "12345",
+                }
+            ]
+        },
+        status=200,
+    )
+    grid_data = {
+        "channels": [
+            {
+                "callSign": "WABC",
+                "channelId": "12345",
+                "channelNo": "2.1",
+                "thumbnail": "//example.com/logo.png",
+                "events": [
+                    {
+                        "startTime": "2023-05-23T20:00:00Z",
+                        "duration": "30",
+                        "filter": [],
+                        "flag": [],
+                        "tags": [],
+                        "program": {
+                            "title": "Test Show",
+                            "id": "PR123",
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+    responses.add(responses.GET, GRID_URL, json=grid_data, status=200)
+
+    out_file = str(tmp_path / "saved_guide.xml")
+    converter = TVTVConverter(test_config)
+    saved_files = converter.save_to_file(out_file)
+
+    assert len(saved_files) == 1
+    stats = converter.get_stats("12345_OTA")
+    assert stats["file_path"] == out_file
+    assert stats["file_size_bytes"] > 0
+    assert stats["channels"] == 1
+    assert stats["days"] == 1
+    assert stats["programs"] == 1
+    assert converter.get_stats() == converter.stats
+

@@ -81,8 +81,21 @@ class XMLTVServer:
         rows = []
         for lid in self.config.lineups:
             marker = " (default)" if lid == default_lineup else ""
+            stats = self.converter.stats.get(lid)
+            if stats:
+                ch = stats.get("channels", 0)
+                days = stats.get("days", 0)
+                progs = stats.get("programs", 0)
+                ch_str = f"{ch} channel" if ch == 1 else f"{ch} channels"
+                day_str = f"{days} day" if days == 1 else f"{days} days"
+                prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
+                stats_info = f" &mdash; <span>{ch_str}, {day_str} of guide ({prog_str})</span>"
+            else:
+                stats_info = ""
+
             rows.append(
-                f'<li><a href="/{lid}.xml">{lid}.xml</a>{marker} '
+                f'<li><a href="/{lid}.xml">{lid}.xml</a>{marker}'
+                f"{stats_info} "
                 f'&mdash; <a href="/set-default/{lid}">set as default</a></li>'
             )
         lineup_list = "\n".join(rows)
@@ -159,6 +172,19 @@ class XMLTVServer:
                     "lineups": self.config.lineups,
                     "default_lineup": self._effective_default_lineup(),
                     "files_exist": files_exist,
+                    "stats": self.converter.stats,
+                }
+            )
+
+        @self.app.route("/stats")
+        def stats():
+            """Feed statistics endpoint"""
+            return jsonify(
+                {
+                    "status": "healthy",
+                    "last_update": self.last_update.isoformat() if self.last_update else None,
+                    "lineups": self.config.lineups,
+                    "stats": self.converter.stats,
                 }
             )
 
@@ -171,6 +197,7 @@ class XMLTVServer:
                     "status": "updated",
                     "last_update": self.last_update.isoformat() if self.last_update else None,
                     "lineups": self.config.lineups,
+                    "stats": self.converter.stats,
                 }
             )
 
@@ -192,14 +219,32 @@ class XMLTVServer:
                 self.last_update = datetime.now(timezone.utc)
 
                 if len(saved_files) == 1:
+                    lineup_id = self.config.lineups[0]
+                    st = self.converter.stats.get(lineup_id, {})
+                    ch = st.get("channels", 0)
+                    days = st.get("days", 0)
+                    progs = st.get("programs", 0)
+                    ch_str = f"{ch} channel" if ch == 1 else f"{ch} channels"
+                    day_str = f"{days} day" if days == 1 else f"{days} days"
+                    prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
                     print(
                         f"XMLTV file updated successfully at {self.last_update}: "
-                        f"{saved_files[0]}"
+                        f"{saved_files[0]} ({ch_str}, {day_str} of guide, {prog_str})"
                     )
                 else:
-                    print(f"XMLTV files updated successfully at {self.last_update}")
-                    for f in saved_files:
-                        print(f"  - {f}")
+                    print(f"XMLTV files updated successfully at {self.last_update}:")
+                    for lineup_id in self.config.lineups:
+                        filename = self.lineup_files.get(lineup_id, f"{lineup_id}.xml")
+                        st = self.converter.stats.get(lineup_id, {})
+                        ch = st.get("channels", 0)
+                        days = st.get("days", 0)
+                        progs = st.get("programs", 0)
+                        ch_str = f"{ch} channel" if ch == 1 else f"{ch} channels"
+                        day_str = f"{days} day" if days == 1 else f"{days} days"
+                        prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
+                        print(
+                            f"  - {lineup_id} ({filename}): {ch_str}, {day_str} of guide ({prog_str})"
+                        )
             except Exception as e:  # pylint: disable=broad-except
                 print(f"Error updating XMLTV file(s): {e}")
 

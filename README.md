@@ -6,6 +6,7 @@ Convert TV listings to XMLTV format and serve them via HTTP.
 
 - ✅ Fetches TV guide data from the free Gracenote/Zap2it grid API (up to 14 days)
 - ✅ Converts to standard XMLTV format
+- ✅ Feed statistics reporting (channels retrieved, days of guide available, total programs)
 - ✅ Built-in HTTP server to serve XMLTV files
 - ✅ Automatic periodic updates
 - ✅ Docker support with docker-compose
@@ -282,16 +283,18 @@ tvtv2xmltv/
 ### Single Lineup Mode
 - `GET /` - Download XMLTV file
 - `GET /xmltv.xml` - Download XMLTV file (alternative endpoint)
-- `GET /health` - Health check (returns JSON with status)
-- `GET /update` - Manually trigger XMLTV update
+- `GET /health` - Health check (returns JSON with status and feed statistics)
+- `GET /stats` - Feed statistics (returns JSON with channels, days of guide, and programs count)
+- `GET /update` - Manually trigger XMLTV update (returns updated status and statistics)
 
 ### Multiple Lineup Mode
 - `GET /` - Download the default lineup's XMLTV file (if `TVTV_DEFAULT_LINEUP` is set or one was picked via `/list`); otherwise, list available lineups (same as `/list`)
-- `GET /list` - List available lineups (HTML page with links, and a "set as default" link per lineup)
+- `GET /list` - List available lineups (HTML page with links, feed statistics, and a "set as default" link per lineup)
 - `GET /set-default/<lineup-id>` - Pick which lineup is served at `/` (persisted across restarts)
 - `GET /<lineup-id>.xml` - Download XMLTV file for specific lineup (e.g., `/USA-OTA30236.xml`)
-- `GET /health` - Health check (returns JSON with status, lineup list, and current default lineup)
-- `GET /update` - Manually trigger XMLTV update for all lineups
+- `GET /health` - Health check (returns JSON with status, lineup list, current default lineup, and feed statistics)
+- `GET /stats` - Feed statistics (returns JSON with channels, days of guide, and programs count for all feeds)
+- `GET /update` - Manually trigger XMLTV update for all lineups (returns updated status and statistics)
 
 ## XMLTV Format
 

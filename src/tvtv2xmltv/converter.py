@@ -17,6 +17,62 @@ class TVTVConverter:
         self.config = config
         # Don't create a single client here: each lineup has its own client
         self.generator = XMLTVGenerator(config.timezone, config.stream_base_url)
+        self.stats = {}
+
+    def _calculate_stats(self, lineup_id, lineup_data, listings_by_day):
+        """
+        Calculate statistics for a single converted lineup.
+
+        Args:
+            lineup_id: The lineup identifier
+            lineup_data: List of channel dictionaries
+            listings_by_day: List of daily listings (each day is a list of channel events)
+
+        Returns:
+            Dictionary containing feed statistics
+        """
+        channel_count = len(lineup_data) if lineup_data else 0
+        dates_covered = set()
+        total_programs = 0
+
+        for day_listings in listings_by_day:
+            for channel_events in day_listings:
+                total_programs += len(channel_events)
+                for event in channel_events:
+                    start_time = event.get("startTime")
+                    if start_time:
+                        try:
+                            dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                            dt_local = dt.astimezone(self.generator.tz)
+                            dates_covered.add(dt_local.date())
+                        except Exception:  # pylint: disable=broad-except
+                            dates_covered.add(start_time[:10])
+
+        days_available = len(dates_covered)
+
+        return {
+            "lineup_id": lineup_id,
+            "channels": channel_count,
+            "days": days_available,
+            "programs": total_programs,
+            "days_requested": self.config.days,
+            "file_path": None,
+            "file_size_bytes": None,
+        }
+
+    def get_stats(self, lineup_id=None):
+        """
+        Get statistics for a specific lineup or all lineups.
+
+        Args:
+            lineup_id: Optional lineup ID to get stats for
+
+        Returns:
+            Dictionary of stats for a single lineup, or dictionary of all lineups' stats
+        """
+        if lineup_id is not None:
+            return self.stats.get(lineup_id)
+        return self.stats
 
     def convert_lineup(self, lineup_id):
         """
@@ -70,6 +126,9 @@ class TVTVConverter:
         source_url = f"{self.config.external_url}/{lineup_id}.xml"
         xmltv_data = self.generator.generate(lineup_data, listings_by_day, source_url)
 
+        # Record statistics for this lineup
+        self.stats[lineup_id] = self._calculate_stats(lineup_id, lineup_data, listings_by_day)
+
         return xmltv_data
 
     def convert(self):
@@ -121,6 +180,10 @@ class TVTVConverter:
             with open(abs_filename, "w", encoding="utf-8") as f:
                 f.write(xmltv_data)
 
+            if lineup_id in self.stats:
+                self.stats[lineup_id]["file_path"] = abs_filename
+                self.stats[lineup_id]["file_size_bytes"] = os.path.getsize(abs_filename)
+
             saved_files.append(abs_filename)
         else:
             # Multiple lineups: save each to {lineup_id}.xml in current directory
@@ -132,6 +195,10 @@ class TVTVConverter:
 
                 with open(abs_filename, "w", encoding="utf-8") as f:
                     f.write(xmltv_data)
+
+                if lineup_id in self.stats:
+                    self.stats[lineup_id]["file_path"] = abs_filename
+                    self.stats[lineup_id]["file_size_bytes"] = os.path.getsize(abs_filename)
 
                 saved_files.append(abs_filename)
 

@@ -33,7 +33,17 @@ We use the following tools to maintain code quality:
 - **Flake8** for linting
 - **Pytest** for testing
 
-Before submitting a PR, please run:
+Before submitting a PR, run the local CI script which mirrors GitHub Actions:
+
+```bash
+# Run all local CI checks (linting, tests with coverage, security scans)
+./run_ci.sh
+
+# Or auto-format and run checks
+./run_ci.sh --fix
+```
+
+You can also run specific checks individually:
 
 ```bash
 # Format code
