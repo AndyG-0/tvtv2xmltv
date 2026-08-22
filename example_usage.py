@@ -8,7 +8,7 @@ import sys
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from tvtv2xmltv.config import Config
+from tvtv2xmltv.config import Config  # noqa: E402
 
 # Example: Set environment variables
 os.environ["TVTV_LINEUP_ID"] = "30236_OTA"
@@ -22,7 +22,7 @@ print()
 
 # Create configuration
 config = Config()
-print(f"Configuration:")
+print("Configuration:")
 print(f"  Lineups: {', '.join(config.lineups)}")
 print(f"  Timezone: {config.timezone}")
 print(f"  Days: {config.days}")

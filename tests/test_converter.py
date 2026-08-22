@@ -153,4 +153,3 @@ def test_converter_save_to_file_populates_stats(test_config, tmp_path, monkeypat
     assert stats["days"] == 1
     assert stats["programs"] == 4
     assert converter.get_stats() == converter.stats
-

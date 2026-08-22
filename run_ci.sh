@@ -63,13 +63,26 @@ show_help() {
     echo "Usage: ./run_ci.sh [options]"
     echo ""
     echo "Options:"
-    echo "  --all         Run all CI stages (default)"
-    echo "  --lint        Run linting and code formatting checks only"
-    echo "  --test        Run unit tests and code coverage only"
-    echo "  --security    Run bandit and safety security scans only"
-    echo "  --fix         Auto-format code with black before running checks"
-    echo "  -h, --help    Show this help message"
+    echo "  --all            Run all CI stages (default)"
+    echo "  --lint           Run linting and code formatting checks only"
+    echo "  --test           Run unit tests and code coverage only"
+    echo "  --security       Run bandit and safety security scans only"
+    echo "  --fix            Auto-format code with black before running checks"
+    echo "  --install-hooks  Install git pre-commit hooks locally"
+    echo "  -h, --help       Show this help message"
     echo ""
+}
+
+# Install git pre-commit hooks
+install_hooks() {
+    print_section "Installing Git Pre-Commit Hooks"
+    if uv run pre-commit install; then
+        print_success "Pre-commit hooks installed successfully."
+        return 0
+    else
+        print_error "Failed to install pre-commit hooks."
+        return 1
+    fi
 }
 
 # Track stage execution and timing
@@ -99,7 +112,7 @@ run_stage() {
 # Auto-format code
 format_code() {
     print_section "Auto-formatting Code with Black"
-    if uv run black src/ tests/; then
+    if uv run black src/ tests/ example_usage.py; then
         print_success "Code formatted successfully."
         return 0
     else
@@ -114,7 +127,7 @@ stage_lint() {
     print_section "Stage 1: Linting & Code Formatting"
 
     echo "1. Checking for Python syntax errors and undefined names (flake8)..."
-    if uv run flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics; then
+    if uv run flake8 src/ tests/ example_usage.py --count --select=E9,F63,F7,F82 --show-source --statistics; then
         print_success "Flake8 syntax check passed."
     else
         print_error "Flake8 syntax check found critical issues."
@@ -123,11 +136,11 @@ stage_lint() {
 
     echo ""
     echo "2. Checking complexity and code style warnings (flake8)..."
-    uv run flake8 src/ --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+    uv run flake8 src/ tests/ example_usage.py --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
 
     echo ""
     echo "3. Verifying code formatting with Black..."
-    if uv run black --check src/; then
+    if uv run black --check src/ tests/ example_usage.py; then
         print_success "Black format check passed."
     else
         print_error "Black format check failed. Run './run_ci.sh --fix' to format automatically."
@@ -260,6 +273,10 @@ main() {
                 --fix|--format)
                     DO_FIX=true
                     shift
+                    ;;
+                --install-hooks)
+                    install_hooks
+                    exit $?
                     ;;
                 -h|--help)
                     show_help
