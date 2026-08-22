@@ -94,11 +94,16 @@ def test_converter_full_flow(test_config, monkeypatch):
     assert stats["days"] == 1
     assert stats["programs"] == 4
     assert stats["lineup_id"] == "12345_OTA"
+    assert stats["start_date"] == "2023-05-23"
+    assert stats["end_date"] == "2023-05-23"
+    assert stats["date_range"] == "2023-05-23"
+    assert stats["dates"] == ["2023-05-23"]
+    assert stats["last_refreshed"] is not None
 
 
 @responses.activate
 def test_converter_save_to_file_populates_stats(test_config, tmp_path, monkeypatch):
-    """Test that save_to_file populates file_path and file_size_bytes in stats"""
+    """Test that save_to_file populates file_path, file_size_bytes, and file_size_human in stats"""
     monkeypatch.setattr("tvtv2xmltv.gracenote_client.time.sleep", lambda seconds: None)
     responses.add(
         responses.GET,
@@ -149,7 +154,20 @@ def test_converter_save_to_file_populates_stats(test_config, tmp_path, monkeypat
     stats = converter.get_stats("12345_OTA")
     assert stats["file_path"] == out_file
     assert stats["file_size_bytes"] > 0
+    assert stats["file_size_human"] != "N/A"
     assert stats["channels"] == 1
     assert stats["days"] == 1
     assert stats["programs"] == 4
     assert converter.get_stats() == converter.stats
+
+
+def test_format_file_size():
+    """Test human-readable file size formatting"""
+    from tvtv2xmltv.converter import format_file_size
+
+    assert format_file_size(None) == "N/A"
+    assert format_file_size(500) == "500 B"
+    assert format_file_size(1024) == "1.0 KB"
+    assert format_file_size(1536) == "1.5 KB"
+    assert format_file_size(1048576) == "1.0 MB"
+    assert format_file_size(1073741824) == "1.0 GB"

@@ -6,12 +6,13 @@ Convert TV listings to XMLTV format and serve them via HTTP.
 
 - ✅ Fetches TV guide data from the free Gracenote/Zap2it grid API (up to 14 days)
 - ✅ Converts to standard XMLTV format
-- ✅ Feed statistics reporting (channels retrieved, days of guide available, total programs)
+- ✅ Comprehensive feed statistics reporting (channels retrieved, days of guide, date coverage, total programs, file size, and last refreshed timestamp)
+- ✅ Interactive web dashboard (`/list` or `/dashboard`) with on-demand feed **Reload** button
 - ✅ Built-in HTTP server to serve XMLTV files
 - ✅ Automatic periodic updates
 - ✅ Docker support with docker-compose
 - ✅ Configurable via environment variables
-- ✅ Health check endpoints
+- ✅ Health check and feed statistics JSON endpoints
 - ✅ Comprehensive test coverage
 - ✅ CI/CD with GitHub Actions
 
@@ -49,24 +50,24 @@ cp .env.example .env
 podman-compose up -d
 ```
 
-The XMLTV file will be available at `http://localhost:8080/xmltv.xml` (or `http://localhost:8081/xmltv.xml` if you set `TVTV_PORT=8081`)
+The XMLTV file will be available at `http://localhost:8080/xmltv.xml` (or `http://localhost:8081/xmltv.xml` if you set `GRACENOTE_PORT=8081` / `TVTV_PORT=8081`)
 
 ## Configuration
 
-Configure the application using environment variables:
+Configure the application using environment variables (`GRACENOTE_*` is preferred; legacy `TVTV_*` aliases are fully supported):
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TVTV_TIMEZONE` | Timezone for guide data (see [tz database](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) | `America/New_York` |
-| `TVTV_LINEUPS` | Comma-separated list of lineup IDs, each `{zipCode}_{headendId}` (e.g., `85142_OTA,85142_AZ02490`). Each lineup will generate its own XMLTV file. | (optional) |
-| `TVTV_LINEUP_ID` | (Deprecated when `TVTV_LINEUPS` is set) Your lineup ID, `{zipCode}_{headendId}` | `30236_OTA` |
-| `TVTV_DEFAULT_LINEUP` | With multiple `TVTV_LINEUPS`, which one is served at `/` (must be one of them). If unset, `/` shows a list until one is picked at runtime via `/list`. | (optional) |
-| `TVTV_DAYS` | Number of days to fetch (1-14) | `8` |
-| `TVTV_UPDATE_INTERVAL` | Update interval in seconds | `3600` |
-| `TVTV_PORT` | HTTP server port | `8080` |
-| `TVTV_HOST` | HTTP server host | `0.0.0.0` |
-| `TVTV_OUTPUT_FILE` | Output file path (used only for single lineup mode) | `xmltv.xml` |
-| `TVTV_MOCK_MODE` | Use mock data instead of real API (for testing) | `false` |
+| Variable (Preferred / Legacy) | Description | Default |
+|-------------------------------|-------------|---------|
+| `GRACENOTE_TIMEZONE` / `TVTV_TIMEZONE` | Timezone for guide data (see [tz database](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)) | `America/Phoenix` |
+| `GRACENOTE_LINEUPS` / `TVTV_LINEUPS` | Comma-separated list of lineup IDs, each `{zipCode}_{headendId}` (e.g., `85142_OTA,85142_AZ02490`). Each lineup will generate its own XMLTV file. | `85142_OTA` |
+| `GRACENOTE_LINEUP_ID` / `TVTV_LINEUP_ID` | (Deprecated when `*_LINEUPS` is set) Single lineup ID, `{zipCode}_{headendId}` | `85142_OTA` |
+| `GRACENOTE_DEFAULT_LINEUP` / `TVTV_DEFAULT_LINEUP` | With multiple lineups, which one is served at `/` (must be one of them). If unset, `/` shows a list until one is picked at runtime via `/list`. | `85142_OTA` |
+| `GRACENOTE_DAYS` / `TVTV_DAYS` | Number of days to fetch (1-14) | `8` |
+| `GRACENOTE_UPDATE_INTERVAL` / `TVTV_UPDATE_INTERVAL` | Update interval in seconds | `3600` |
+| `GRACENOTE_PORT` / `TVTV_PORT` | HTTP server port | `8080` |
+| `GRACENOTE_HOST` / `TVTV_HOST` | HTTP server host | `0.0.0.0` |
+| `GRACENOTE_OUTPUT_FILE` / `TVTV_OUTPUT_FILE` | Output file path (used only for single lineup mode) | `xmltv.xml` |
+| `GRACENOTE_MOCK_MODE` / `TVTV_MOCK_MODE` | Use mock data instead of real API (for testing) | `false` |
 
 ### Finding Your Lineup ID
 
@@ -82,17 +83,17 @@ A lineup ID is `{zipCode}_{headendId}`:
    This returns a `Providers` array; each entry's `headendId` combined with your zip
    code is a valid lineup ID, e.g. `headendId: "AZ02490"` → `85142_AZ02490`.
 
-**Multiple Lineups:** You can specify multiple lineup IDs using the `TVTV_LINEUPS` environment variable with a comma-separated list (e.g., `TVTV_LINEUPS=85142_OTA,85142_AZ02490`). Each lineup will generate its own XMLTV file and be accessible at `/<lineup-id>.xml` (e.g., `/85142_OTA.xml`, `/85142_AZ02490.xml`). The full list of lineups (with links) is always available at `/list`.
+**Multiple Lineups:** You can specify multiple lineup IDs using the `GRACENOTE_LINEUPS` (or `TVTV_LINEUPS`) environment variable with a comma-separated list (e.g., `GRACENOTE_LINEUPS=85142_OTA,85142_AZ02490`). Each lineup will generate its own XMLTV file and be accessible at `/<lineup-id>.xml` (e.g., `/85142_OTA.xml`, `/85142_AZ02490.xml`). The full list of lineups (with links) is always available at `/list`.
 
-**Default Lineup:** With multiple lineups configured, `/` shows the list at `/list` until a default is chosen — either via `TVTV_DEFAULT_LINEUP` (e.g., `TVTV_DEFAULT_LINEUP=85142_OTA`) or by clicking "set as default" next to a lineup on the `/list` page. Once set, `/` serves that lineup's XMLTV file directly, saving you from typing `/<lineup-id>.xml` into other systems. A runtime pick (via `/list`) is persisted and survives restarts; the env var, if set, always takes precedence.
+**Default Lineup:** With multiple lineups configured, `/` serves the designated default (defaults to `85142_OTA`). You can change this via `GRACENOTE_DEFAULT_LINEUP=85142_OTA` or by clicking "set as default" next to a lineup on the `/list` dashboard page. A runtime pick (via `/list`) is persisted and survives restarts; the env var, if set, always takes precedence.
 
 ### Mock Mode for Testing
 
 To test the application without hitting the real API (useful during development):
 
 ```bash
-export TVTV_MOCK_MODE=true
-export TVTV_LINEUPS=85142_OTA,85142_AZ02490
+export GRACENOTE_MOCK_MODE=true
+export GRACENOTE_LINEUPS=85142_OTA,85142_AZ02490
 ./run_server_mock.sh
 ```
 
@@ -112,33 +113,30 @@ Mock mode uses fixture data from `tests/fixtures/` directory.
 
 ```bash
 # Build the image
-docker build -t tvtv2xmltv .
+docker build -t gracenote2xmltv .
 
 # Run the container
 docker run -d \
   -p 8080:8080 \
-  -e TVTV_LINEUPS=YOUR_LINEUP_ID_1,YOUR_LINEUP_ID_2 \
-  -e TVTV_TIMEZONE=America/New_York \
-  -v tvtv-data:/data \
-  tvtv2xmltv
-
-# Or, for backwards compatibility use TVTV_LINEUP_ID (single lineup):
-#  -e TVTV_LINEUP_ID=YOUR_LINEUP_ID
+  -e GRACENOTE_LINEUPS=85142_OTA,85142_AZ02490 \
+  -e GRACENOTE_TIMEZONE=America/Phoenix \
+  -v xmltv-data:/data \
+  gracenote2xmltv
 ```
 
 **Using Podman:**
 
 ```bash
 # Build the image
-podman build -t tvtv2xmltv .
+podman build -t gracenote2xmltv .
 
 # Run the container
 podman run -d \
   -p 8080:8080 \
-  -e TVTV_LINEUPS=YOUR_LINEUP_ID_1,YOUR_LINEUP_ID_2 \
-  -e TVTV_TIMEZONE=America/New_York \
-  -v tvtv-data:/data \
-  tvtv2xmltv
+  -e GRACENOTE_LINEUPS=85142_OTA,85142_AZ02490 \
+  -e GRACENOTE_TIMEZONE=America/Phoenix \
+  -v xmltv-data:/data \
+  gracenote2xmltv
 
 # Or use podman-compose
 podman-compose -f podman-compose.yml up -d
@@ -158,7 +156,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv pip install -e .
 
 # Run the server
-export TVTV_LINEUP_ID=YOUR_LINEUP_ID
+export GRACENOTE_LINEUP_ID=85142_OTA
+export GRACENOTE_TIMEZONE=America/Phoenix
 python src/main.py --mode serve
 ```
 
@@ -173,7 +172,9 @@ python src/main.py --mode serve
 ```
 
 Access the XMLTV file at:
-- `http://localhost:8080/` or `http://localhost:8080/xmltv.xml` - Download XMLTV file
+- `http://localhost:8080/` or `http://localhost:8080/xmltv.xml` - Download default XMLTV file (`85142_OTA.xml`)
+- `http://localhost:8080/85142_OTA.xml` - Download 85142 Over-The-Air guide
+- `http://localhost:8080/list` or `http://localhost:8080/dashboard` - Web dashboard
 - `http://localhost:8080/health` - Health check endpoint
 - `http://localhost:8080/update` - Manually trigger update
 
@@ -192,7 +193,7 @@ python src/main.py --mode convert --output guide.xml
 1. Install the XMLTV plugin in Jellyfin
 2. Configure the XMLTV plugin:
    - **Single lineup:** `http://your-server:8080/xmltv.xml`
-   - **Multiple lineups:** `http://your-server:8080/<lineup-id>.xml` (e.g., `http://your-server:8080/USA-OTA30236.xml`)
+   - **Multiple lineups:** `http://your-server:8080/<lineup-id>.xml` (e.g., `http://your-server:8080/85142_OTA.xml`)
 3. Set up automatic refresh (recommended: every 12-24 hours)
 
 ### Plex
@@ -200,7 +201,7 @@ python src/main.py --mode convert --output guide.xml
 1. Configure Plex DVR settings
 2. Add XMLTV source:
    - **Single lineup:** `http://your-server:8080/xmltv.xml`
-   - **Multiple lineups:** `http://your-server:8080/<lineup-id>.xml`
+   - **Multiple lineups:** `http://your-server:8080/<lineup-id>.xml` (e.g., `http://your-server:8080/85142_OTA.xml`)
 
 ### Emby
 
@@ -281,20 +282,21 @@ tvtv2xmltv/
 ## API Endpoints
 
 ### Single Lineup Mode
-- `GET /` - Download XMLTV file
+- `GET /` - Download XMLTV file (default output)
 - `GET /xmltv.xml` - Download XMLTV file (alternative endpoint)
-- `GET /health` - Health check (returns JSON with status and feed statistics)
-- `GET /stats` - Feed statistics (returns JSON with channels, days of guide, and programs count)
-- `GET /update` - Manually trigger XMLTV update (returns updated status and statistics)
+- `GET /list` or `GET /dashboard` - Web dashboard displaying feed statistics (channel count, days, date range, programs count, file size, last refreshed) and on-demand **Reload Feeds** button
+- `GET /health` - Health check (returns JSON with status and comprehensive feed statistics)
+- `GET /stats` - Feed statistics (returns JSON with channels, days, date range, programs count, and last refreshed)
+- `GET|POST /update` - Manually trigger XMLTV feed reload (returns JSON or redirects to `/list?refreshed=1` for browser form submissions)
 
 ### Multiple Lineup Mode
-- `GET /` - Download the default lineup's XMLTV file (if `TVTV_DEFAULT_LINEUP` is set or one was picked via `/list`); otherwise, list available lineups (same as `/list`)
-- `GET /list` - List available lineups (HTML page with links, feed statistics, and a "set as default" link per lineup)
+- `GET /` - Download the default lineup's XMLTV file (if `TVTV_DEFAULT_LINEUP` is set or one was picked via `/list`); otherwise, show web dashboard (same as `/list`)
+- `GET /list` or `GET /dashboard` - Web dashboard with interactive **Reload Feeds** button, cards with full statistics for each lineup, download links, and a "Set as default" action per lineup
 - `GET /set-default/<lineup-id>` - Pick which lineup is served at `/` (persisted across restarts)
-- `GET /<lineup-id>.xml` - Download XMLTV file for specific lineup (e.g., `/USA-OTA30236.xml`)
+- `GET /<lineup-id>.xml` - Download XMLTV file for specific lineup (e.g., `/85142_OTA.xml`)
 - `GET /health` - Health check (returns JSON with status, lineup list, current default lineup, and feed statistics)
-- `GET /stats` - Feed statistics (returns JSON with channels, days of guide, and programs count for all feeds)
-- `GET /update` - Manually trigger XMLTV update for all lineups (returns updated status and statistics)
+- `GET /stats` - Feed statistics (returns JSON with channels, days, date ranges, programs count, and file sizes for all feeds)
+- `GET|POST /update` - Manually trigger XMLTV update for all lineups (returns JSON or redirects to `/list?refreshed=1`)
 
 ## XMLTV Format
 

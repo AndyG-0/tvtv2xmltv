@@ -59,6 +59,7 @@ def test_server_routes(test_config):
     assert "/stats" in rules
     assert "/update" in rules
     assert "/list" in rules
+    assert "/dashboard" in rules
     assert "/set-default/<lineup_id>" in rules
 
 
@@ -230,7 +231,7 @@ def test_update_loop_has_no_initial_call(test_config, monkeypatch):
 
 
 def test_list_endpoint_shows_feed_stats(multi_lineup_config):
-    """'/list' should render feed statistics when available"""
+    """'/list' should render feed statistics and reload button when available"""
     server = XMLTVServer(multi_lineup_config)
     server.converter.stats = {
         "USA-ONE": {
@@ -238,12 +239,22 @@ def test_list_endpoint_shows_feed_stats(multi_lineup_config):
             "days": 8,
             "programs": 120,
             "lineup_id": "USA-ONE",
+            "start_date": "2026-08-22",
+            "end_date": "2026-08-29",
+            "date_range": "2026-08-22 to 2026-08-29",
+            "file_size_human": "1.2 MB",
+            "last_refreshed": "2026-08-22T10:00:00+00:00",
         },
         "USA-TWO": {
             "channels": 1,
             "days": 1,
             "programs": 1,
             "lineup_id": "USA-TWO",
+            "start_date": "2026-08-22",
+            "end_date": "2026-08-22",
+            "date_range": "2026-08-22",
+            "file_size_human": "50 KB",
+            "last_refreshed": "2026-08-22T10:00:00+00:00",
         },
     }
     client = server.app.test_client()
@@ -253,6 +264,69 @@ def test_list_endpoint_shows_feed_stats(multi_lineup_config):
     body = response.get_data(as_text=True)
     assert "6 channels, 8 days of guide (120 programs)" in body
     assert "1 channel, 1 day of guide (1 program)" in body
+    assert "2026-08-22 to 2026-08-29" in body
+    assert "Reload Feeds" in body
+    assert 'id="reload-btn"' in body
+    assert "Last Refreshed" in body
+
+
+def test_list_endpoint_refreshed_banner(multi_lineup_config):
+    """'/list?refreshed=1' should render the success banner"""
+    server = XMLTVServer(multi_lineup_config)
+    client = server.app.test_client()
+
+    response = client.get("/list?refreshed=1")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Feeds refreshed successfully!" in body
+
+
+def test_dashboard_alias(multi_lineup_config):
+    """'/dashboard' should render the same listing as '/list'"""
+    server = XMLTVServer(multi_lineup_config)
+    client = server.app.test_client()
+
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    body = response.get_data(as_text=True)
+    assert "Available XMLTV Lineups" in body
+    assert "Reload Feeds" in body
+
+
+def test_update_endpoint_get_json(test_config, monkeypatch):
+    """GET /update should return JSON update status"""
+    server = XMLTVServer(test_config)
+    monkeypatch.setattr(server.converter, "save_to_file", lambda: [test_config.output_file])
+    client = server.app.test_client()
+
+    response = client.get("/update")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "updated"
+    assert data["last_update"] is not None
+
+
+def test_update_endpoint_post_json(test_config, monkeypatch):
+    """POST /update with JSON accept should return JSON"""
+    server = XMLTVServer(test_config)
+    monkeypatch.setattr(server.converter, "save_to_file", lambda: [test_config.output_file])
+    client = server.app.test_client()
+
+    response = client.post("/update", headers={"Accept": "application/json"})
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["status"] == "updated"
+
+
+def test_update_endpoint_post_form_redirects(test_config, monkeypatch):
+    """POST /update from standard form should redirect to /list?refreshed=1"""
+    server = XMLTVServer(test_config)
+    monkeypatch.setattr(server.converter, "save_to_file", lambda: [test_config.output_file])
+    client = server.app.test_client()
+
+    response = client.post("/update", headers={"Accept": "text/html"})
+    assert response.status_code == 302
+    assert response.headers["Location"] == "/list?refreshed=1"
 
 
 def test_update_xmltv_logging_with_stats(test_config, monkeypatch, capsys):
@@ -271,3 +345,4 @@ def test_update_xmltv_logging_with_stats(test_config, monkeypatch, capsys):
     assert "10 channels" in captured.out
     assert "5 days of guide" in captured.out
     assert "200 programs" in captured.out
+    assert server.converter.stats[test_config.lineups[0]]["last_refreshed"] is not None
