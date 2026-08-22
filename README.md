@@ -351,26 +351,28 @@ podman-compose up -d --build
 
 ## Releasing
 
-To create a new release, tag the Docker/Podman container image, and push both the container image and Git tag, use the included release script:
+Releases and container image builds are automated via **GitHub Actions** (`.github/workflows/docker.yml`).
+
+To initiate a release, use the included [`release.sh`](release.sh) script, which runs local quality checks, synchronizes versions across project files, creates an annotated Git tag (`vX.Y.Z`), and pushes to GitHub. Pushing the tag triggers GitHub Actions to build multi-arch container images (`linux/amd64`, `linux/arm64`) and publish them to GitHub Container Registry (GHCR):
 
 ```bash
 # Preview release actions without making changes
 ./release.sh --dry-run
 
-# Release with a patch version bump (e.g., 1.0.0 -> 1.0.1)
+# Release with a patch version bump (e.g. 2.0.0 -> 2.0.1)
 ./release.sh --patch
 
-# Release with a minor version bump (e.g., 1.0.0 -> 1.1.0)
+# Release with a minor version bump (e.g. 2.0.0 -> 2.1.0)
 ./release.sh --minor
 
 # Release a specific version
-./release.sh 1.1.0
+./release.sh 2.1.0
 
-# Build and tag locally without pushing
-./release.sh 1.1.0 --build-only
+# Release and watch the triggered GitHub Actions workflow live
+./release.sh 2.1.0 --watch
 ```
 
-See `./release.sh --help` for all available options (custom registry, engine selection, skipping tests, etc.).
+See `./release.sh --help` for all available options.
 
 ## Contributing
 

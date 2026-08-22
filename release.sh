@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# release.sh - Release Automation Script for tvtv2xmltv
-# Builds, tags, and pushes container image releases and git tags.
+# release.sh - GitHub Actions-Driven Release Automation for tvtv2xmltv
+# Validates, synchronizes versioning, creates Git release tags, and pushes
+# to trigger GitHub Actions image build & publish workflow (.github/workflows/docker.yml).
 # Compatible with Bash 3.2+ (macOS default) and Bash 4/5+ (Linux)
 # ==============================================================================
 
@@ -23,7 +24,7 @@ NC="\033[0m" # No Color
 
 print_header() {
     echo -e "${BLUE}${BOLD}======================================================================${NC}"
-    echo -e "${BLUE}${BOLD}  🚀 tvtv2xmltv - Release & Image Publishing Pipeline${NC}"
+    echo -e "${BLUE}${BOLD}  🚀 tvtv2xmltv - Release & Tagging Automation${NC}"
     echo -e "${BLUE}${BOLD}======================================================================${NC}"
 }
 
@@ -53,7 +54,9 @@ show_help() {
     cat << 'EOF'
 Usage: ./release.sh [VERSION | OPTIONS]
 
-Automates building, tagging, and pushing container images and Git tags.
+Creates a new versioned release tag and pushes it to GitHub, triggering
+the GitHub Actions workflow (.github/workflows/docker.yml) to build, test,
+and publish the container image to GitHub Container Registry (ghcr.io).
 
 Arguments:
   VERSION                     Release version (e.g., 1.1.0 or v1.1.0).
@@ -65,51 +68,42 @@ Version Bump Options:
   --major                     Bump major version (e.g. 1.0.0 -> 2.0.0)
   -v, --version <VERSION>     Explicitly specify target release version
 
-Container & Registry Options:
-  -r, --registry <REGISTRY>   Container registry (default: ghcr.io, or $REGISTRY)
-  -i, --image <IMAGE_NAME>    Image name / repository path (default: AndyG-0/tvtv2xmltv, or $IMAGE_NAME)
-  -e, --engine <ENGINE>       Container runtime engine: docker or podman (default: auto-detected)
-  --no-latest                 Do not tag or push the ':latest' image tag
-  --build-only, --no-image-push
-                              Build and tag image locally without pushing to registry
-
-Git Release Options:
-  --no-git-tag                Skip creating an annotated git tag
-  --no-git-push               Skip pushing git tag to remote origin
-  --allow-dirty               Allow release with uncommitted changes in working directory
+Release Options:
+  -m, --message <MESSAGE>     Custom release message / tag annotation
+  -w, --watch                 Watch the triggered GitHub Actions workflow (requires gh CLI)
+  --no-push                   Tag locally without pushing to remote origin
+  --allow-dirty               Allow release with uncommitted changes in working tree
   --allow-branch              Allow release from branches other than main/master
 
 Quality & Execution Options:
-  --skip-tests, --no-test     Skip running pre-release lint and test checks
+  --skip-tests, --no-test     Skip running pre-release lint and test checks locally
   -n, --dry-run               Simulate release steps without modifying files, tagging, or pushing
   -y, --yes, --non-interactive
                               Skip all interactive confirmation prompts
   -h, --help                  Display this help message and exit
 
 Examples:
-  ./release.sh --dry-run                 # Preview release with current version
-  ./release.sh --patch                   # Bump patch (1.0.0 -> 1.0.1), build, tag, and push
+  ./release.sh --dry-run                 # Preview release steps without making changes
+  ./release.sh --patch                   # Bump patch (1.0.0 -> 1.0.1), tag, and push to trigger Actions
+  ./release.sh --minor                   # Bump minor (1.0.0 -> 1.1.0), tag, and push
   ./release.sh 1.1.0                     # Release version 1.1.0
-  ./release.sh 1.1.0 --build-only        # Build and tag image 1.1.0 locally without pushing
-  ./release.sh --registry docker.io --image myuser/tvtv2xmltv
+  ./release.sh 1.1.0 --watch             # Release and stream the GitHub Actions workflow execution
+  ./release.sh 1.1.0 --no-push           # Create version bump and tag locally only
 EOF
 }
 
 # Defaults
 VERSION=""
 BUMP_TYPE=""
-REGISTRY="${REGISTRY:-ghcr.io}"
-IMAGE_NAME="${IMAGE_NAME:-}"
-CONTAINER_ENGINE="${CONTAINER_ENGINE:-}"
-TAG_LATEST=true
-PUSH_IMAGE=true
-GIT_TAG=true
-GIT_PUSH=true
+RELEASE_MESSAGE=""
+PUSH_TO_REMOTE=true
 RUN_TESTS=true
+WATCH_WORKFLOW=false
 ALLOW_DIRTY=false
 ALLOW_BRANCH=false
 DRY_RUN=false
 AUTO_CONFIRM=false
+REPO_SLUG=""
 
 # Parse command line arguments
 parse_args() {
@@ -140,47 +134,21 @@ parse_args() {
                     exit 1
                 fi
                 ;;
-            -r|--registry)
+            -m|--message)
                 if [ -n "${2:-}" ]; then
-                    REGISTRY="$2"
+                    RELEASE_MESSAGE="$2"
                     shift 2
                 else
-                    print_error "--registry requires a registry argument"
+                    print_error "--message requires a message argument"
                     exit 1
                 fi
                 ;;
-            -i|--image)
-                if [ -n "${2:-}" ]; then
-                    IMAGE_NAME="$2"
-                    shift 2
-                else
-                    print_error "--image requires an image name argument"
-                    exit 1
-                fi
-                ;;
-            -e|--engine)
-                if [ -n "${2:-}" ]; then
-                    CONTAINER_ENGINE="$2"
-                    shift 2
-                else
-                    print_error "--engine requires an engine argument (docker or podman)"
-                    exit 1
-                fi
-                ;;
-            --no-latest)
-                TAG_LATEST=false
+            -w|--watch)
+                WATCH_WORKFLOW=true
                 shift
                 ;;
-            --build-only|--no-push|--no-image-push)
-                PUSH_IMAGE=false
-                shift
-                ;;
-            --no-git-tag)
-                GIT_TAG=false
-                shift
-                ;;
-            --no-git-push)
-                GIT_PUSH=false
+            --no-push)
+                PUSH_TO_REMOTE=false
                 shift
                 ;;
             --skip-tests|--no-test)
@@ -222,31 +190,6 @@ parse_args() {
     done
 }
 
-# Detect container engine (docker or podman)
-detect_container_engine() {
-    if [ -n "$CONTAINER_ENGINE" ]; then
-        if command -v "$CONTAINER_ENGINE" &>/dev/null; then
-            print_success "Using specified container engine: $CONTAINER_ENGINE"
-            return 0
-        else
-            print_error "Specified container engine '$CONTAINER_ENGINE' not found in PATH."
-            exit 1
-        fi
-    fi
-
-    if command -v docker &>/dev/null; then
-        CONTAINER_ENGINE="docker"
-        print_success "Detected container engine: docker"
-    elif command -v podman &>/dev/null; then
-        CONTAINER_ENGINE="podman"
-        print_success "Detected container engine: podman"
-    else
-        print_error "Neither 'docker' nor 'podman' was found in PATH."
-        print_info "Please install Docker or Podman to build and push container images."
-        exit 1
-    fi
-}
-
 # Extract current version from pyproject.toml
 get_current_version() {
     if [ -f "pyproject.toml" ]; then
@@ -258,25 +201,20 @@ get_current_version() {
     fi
 }
 
-# Extract default repository image name from git remote
-detect_image_name() {
-    if [ -n "$IMAGE_NAME" ]; then
-        return 0
-    fi
-
+# Extract GitHub repo slug (e.g. AndyG-0/tvtv2xmltv) from git remote
+detect_repo_slug() {
     local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null || true)
     if [ -n "$remote_url" ]; then
         local extracted
-        extracted=$(echo "$remote_url" | sed -E 's#^.*[:/]([^/]+/[^/]+)(\.git)?$#\1#' | tr '[:upper:]' '[:lower:]' | sed 's/\.git$//')
+        extracted=$(echo "$remote_url" | sed -E 's#^.*[:/]([^/]+/[^/]+)(\.git)?$#\1#' | sed 's/\.git$//')
         if [ -n "$extracted" ] && [[ "$extracted" == *"/"* ]]; then
-            IMAGE_NAME="$extracted"
+            REPO_SLUG="$extracted"
             return 0
         fi
     fi
 
-    # Fallback to project name
-    IMAGE_NAME="andyg-0/tvtv2xmltv"
+    REPO_SLUG="AndyG-0/tvtv2xmltv"
 }
 
 # Bump semver version
@@ -292,7 +230,6 @@ calculate_bump() {
     minor=$(echo "$base_ver" | cut -d. -f2)
     patch=$(echo "$base_ver" | cut -d. -f3 | cut -d- -f1)
 
-    # Defaults if missing parts
     major="${major:-1}"
     minor="${minor:-0}"
     patch="${patch:-0}"
@@ -383,8 +320,12 @@ main() {
 
     # Stage 1: Validation & Setup
     print_section "Stage 1: Pre-flight Validations"
-    detect_container_engine
-    detect_image_name
+    detect_repo_slug
+
+    if [ ! -d ".git" ]; then
+        print_error "This script must be executed inside a Git repository."
+        exit 1
+    fi
 
     local current_version
     current_version=$(get_current_version)
@@ -396,10 +337,10 @@ main() {
         print_info "Calculated $BUMP_TYPE bump: ${BOLD}$VERSION${NC}"
     elif [ -z "$VERSION" ]; then
         VERSION="$current_version"
-        print_info "Using current version: ${BOLD}$VERSION${NC}"
+        print_info "Using target version: ${BOLD}$VERSION${NC}"
     fi
 
-    # Strip any leading 'v'
+    # Strip leading 'v'
     VERSION="${VERSION#v}"
 
     if ! validate_version "$VERSION"; then
@@ -407,121 +348,81 @@ main() {
     fi
 
     local GIT_TAG_NAME="v${VERSION}"
-    local MAJOR_VERSION
-    local MINOR_VERSION
-    MAJOR_VERSION=$(echo "$VERSION" | cut -d. -f1)
-    MINOR_VERSION=$(echo "$VERSION" | cut -d. -f2)
+    if [ -z "$RELEASE_MESSAGE" ]; then
+        RELEASE_MESSAGE="Release v${VERSION}"
+    fi
 
-    # Check Git repository status
-    if [ -d ".git" ]; then
-        local current_branch
-        current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-        if [ "$current_branch" != "main" ] && [ "$current_branch" != "master" ] && [ "$ALLOW_BRANCH" = false ]; then
-            print_warning "You are currently on branch '$current_branch' (expected 'main')."
+    # Check Git branch
+    local current_branch
+    current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+    if [ "$current_branch" != "main" ] && [ "$current_branch" != "master" ] && [ "$ALLOW_BRANCH" = false ]; then
+        print_warning "You are on branch '$current_branch' (expected 'main')."
+        if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
+            read -r -p "Do you want to continue releasing from '$current_branch'? [y/N] " confirm_branch
+            if [[ ! "$confirm_branch" =~ ^[Yy]$ ]]; then
+                print_error "Aborted by user."
+                exit 1
+            fi
+        fi
+    else
+        print_success "On release branch: $current_branch"
+    fi
+
+    # Check for uncommitted changes (excluding version files if we're bumping)
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        if [ "$ALLOW_DIRTY" = false ]; then
+            print_warning "Git working tree has uncommitted modifications."
             if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
-                read -r -p "Do you want to continue releasing from '$current_branch'? [y/N] " confirm_branch
-                if [[ ! "$confirm_branch" =~ ^[Yy]$ ]]; then
-                    print_error "Aborted by user."
+                read -r -p "Continue release with uncommitted changes? [y/N] " confirm_dirty
+                if [[ ! "$confirm_dirty" =~ ^[Yy]$ ]]; then
+                    print_error "Release aborted due to uncommitted changes. Commit or stash them first, or pass --allow-dirty."
                     exit 1
                 fi
             fi
         else
-            print_success "On valid release branch: $current_branch"
+            print_warning "Proceeding with uncommitted changes (--allow-dirty)."
         fi
+    else
+        print_success "Git working tree is clean."
+    fi
 
-        # Check for uncommitted changes
-        if ! git diff --quiet || ! git diff --cached --quiet; then
-            if [ "$ALLOW_DIRTY" = false ]; then
-                print_warning "Git working tree has uncommitted modifications."
-                if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
-                    read -r -p "Continue release with uncommitted changes? [y/N] " confirm_dirty
-                    if [[ ! "$confirm_dirty" =~ ^[Yy]$ ]]; then
-                        print_error "Release aborted due to uncommitted changes. Commit or stash them first, or pass --allow-dirty."
-                        exit 1
-                    fi
-                fi
-            else
-                print_warning "Proceeding with uncommitted changes (--allow-dirty)."
-            fi
-        else
-            print_success "Git working tree is clean."
-        fi
-
-        # Check if git tag already exists
-        if git rev-parse "$GIT_TAG_NAME" >/dev/null 2>&1; then
-            if [ "$GIT_TAG" = true ]; then
-                print_warning "Git tag '$GIT_TAG_NAME' already exists locally."
-                if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
-                    read -r -p "Overwrite existing git tag '$GIT_TAG_NAME'? [y/N] " confirm_tag
-                    if [[ ! "$confirm_tag" =~ ^[Yy]$ ]]; then
-                        print_info "Skipping git tag creation (--no-git-tag)."
-                        GIT_TAG=false
-                    fi
-                fi
+    # Check if git tag already exists locally or remotely
+    if git rev-parse "$GIT_TAG_NAME" >/dev/null 2>&1; then
+        print_warning "Git tag '$GIT_TAG_NAME' already exists locally."
+        if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
+            read -r -p "Overwrite existing local tag '$GIT_TAG_NAME'? [y/N] " confirm_tag
+            if [[ ! "$confirm_tag" =~ ^[Yy]$ ]]; then
+                print_error "Release aborted: tag '$GIT_TAG_NAME' already exists."
+                exit 1
             fi
         fi
     fi
 
-    # Target Registry Image prefix
-    local FULL_IMAGE_NAME="${REGISTRY}/${IMAGE_NAME}"
-    local LOCAL_IMAGE_NAME="tvtv2xmltv"
-
-    # Image Tags List
-    local TARGET_TAGS=()
-    TARGET_TAGS+=("${FULL_IMAGE_NAME}:${VERSION}")
-    TARGET_TAGS+=("${FULL_IMAGE_NAME}:v${VERSION}")
-    TARGET_TAGS+=("${FULL_IMAGE_NAME}:${MAJOR_VERSION}.${MINOR_VERSION}")
-    TARGET_TAGS+=("${FULL_IMAGE_NAME}:${MAJOR_VERSION}")
-    if [ "$TAG_LATEST" = true ]; then
-        TARGET_TAGS+=("${FULL_IMAGE_NAME}:latest")
-    fi
+    local IMAGE_REGISTRY_PATH="ghcr.io/$(echo "$REPO_SLUG" | tr '[:upper:]' '[:lower:]')"
 
     # Release Plan Summary
     echo ""
-    echo -e "${CYAN}${BOLD}Release Plan:${NC}"
-    echo "  • Version:         $VERSION (Git Tag: $GIT_TAG_NAME)"
-    echo "  • Container:       $CONTAINER_ENGINE"
-    echo "  • Registry Image:  $FULL_IMAGE_NAME"
-    echo "  • Generated Tags:  "
-    for tag in "${TARGET_TAGS[@]}"; do
-        echo "      - $tag"
-    done
-    echo "      - ${LOCAL_IMAGE_NAME}:${VERSION} (local)"
-    if [ "$TAG_LATEST" = true ]; then
-        echo "      - ${LOCAL_IMAGE_NAME}:latest (local)"
-    fi
-    echo "  • Push Images:     $PUSH_IMAGE"
-    echo "  • Create Git Tag:  $GIT_TAG"
-    echo "  • Push Git Tag:    $GIT_PUSH"
-    echo "  • Run Tests:       $RUN_TESTS"
+    echo -e "${CYAN}${BOLD}Release Execution Plan:${NC}"
+    echo "  • Target Version:        $VERSION"
+    echo "  • Git Tag:               $GIT_TAG_NAME"
+    echo "  • Target Branch:         $current_branch"
+    echo "  • Push to Remote:        $PUSH_TO_REMOTE"
+    echo "  • Run Pre-Release Tests: $RUN_TESTS"
+    echo "  • Actions Target Image:  $IMAGE_REGISTRY_PATH:$GIT_TAG_NAME"
+    echo "  • Actions Target Image:  $IMAGE_REGISTRY_PATH:latest"
     echo ""
 
     if [ "$AUTO_CONFIRM" = false ] && [ "$DRY_RUN" = false ]; then
-        read -r -p "Proceed with release $VERSION? [y/N] " confirm_all
+        read -r -p "Proceed with creating and pushing release $GIT_TAG_NAME? [y/N] " confirm_all
         if [[ ! "$confirm_all" =~ ^[Yy]$ ]]; then
             print_error "Release cancelled by user."
             exit 0
         fi
     fi
 
-    # Stage 2: Synchronize version files
-    if [ "$VERSION" != "$current_version" ]; then
-        print_section "Stage 2: Version Synchronization"
-        update_version_files "$VERSION" "$current_version"
-
-        if [ -d ".git" ] && [ "$DRY_RUN" = false ]; then
-            if ! git diff --quiet pyproject.toml src/tvtv2xmltv/__init__.py 2>/dev/null; then
-                print_info "Committing version bump to git..."
-                exec_cmd git add pyproject.toml src/tvtv2xmltv/__init__.py
-                exec_cmd git commit -m "chore(release): bump version to $VERSION"
-                print_success "Version bump committed."
-            fi
-        fi
-    fi
-
-    # Stage 3: Quality Checks & Testing
+    # Stage 2: Quality Checks & Testing
     if [ "$RUN_TESTS" = true ]; then
-        print_section "Stage 3: Pre-Release Quality Checks"
+        print_section "Stage 2: Pre-Release Quality Checks"
         if [ -f "./run_ci.sh" ]; then
             print_info "Running CI lint and test suite..."
             if [ "$DRY_RUN" = true ]; then
@@ -530,7 +431,7 @@ main() {
                 if ./run_ci.sh --lint --test; then
                     print_success "All pre-release tests and lint checks passed."
                 else
-                    print_error "Pre-release tests failed. Resolve issues or run with --skip-tests."
+                    print_error "Pre-release tests failed. Please fix before tagging, or pass --skip-tests."
                     exit 1
                 fi
             fi
@@ -551,93 +452,88 @@ main() {
         print_info "Skipping pre-release test suite (--skip-tests)."
     fi
 
-    # Stage 4: Build Container Image
-    print_section "Stage 4: Building Container Image"
-    print_info "Building base image '${LOCAL_IMAGE_NAME}:${VERSION}' with $CONTAINER_ENGINE..."
-    exec_cmd "$CONTAINER_ENGINE" build -t "${LOCAL_IMAGE_NAME}:${VERSION}" .
+    # Stage 3: Version Synchronization & Commit
+    if [ "$VERSION" != "$current_version" ]; then
+        print_section "Stage 3: Version Synchronization"
+        update_version_files "$VERSION" "$current_version"
 
-    # Smoke test built image
-    print_info "Running smoke test on built container image..."
-    if [ "$DRY_RUN" = false ]; then
-        local smoke_output
-        if smoke_output=$("$CONTAINER_ENGINE" run --rm "${LOCAL_IMAGE_NAME}:${VERSION}" python -c "import tvtv2xmltv; print(tvtv2xmltv.__version__)" 2>&1); then
-            print_success "Container smoke test passed (version: $smoke_output)."
-        else
-            print_error "Container smoke test failed: $smoke_output"
-            exit 1
-        fi
-    else
-        exec_cmd "$CONTAINER_ENGINE" run --rm "${LOCAL_IMAGE_NAME}:${VERSION}" python -c "import tvtv2xmltv; print(tvtv2xmltv.__version__)"
-    fi
-
-    # Stage 5: Tag Image Variants
-    print_section "Stage 5: Tagging Container Images"
-    if [ "$TAG_LATEST" = true ]; then
-        exec_cmd "$CONTAINER_ENGINE" tag "${LOCAL_IMAGE_NAME}:${VERSION}" "${LOCAL_IMAGE_NAME}:latest"
-        print_success "Tagged ${LOCAL_IMAGE_NAME}:latest"
-    fi
-
-    for tag in "${TARGET_TAGS[@]}"; do
-        exec_cmd "$CONTAINER_ENGINE" tag "${LOCAL_IMAGE_NAME}:${VERSION}" "$tag"
-        print_success "Tagged $tag"
-    done
-
-    # Stage 6: Push Container Images
-    if [ "$PUSH_IMAGE" = true ]; then
-        print_section "Stage 6: Pushing Container Images to Registry ($REGISTRY)"
-        for tag in "${TARGET_TAGS[@]}"; do
-            print_info "Pushing $tag..."
-            if ! exec_cmd "$CONTAINER_ENGINE" push "$tag"; then
-                print_error "Failed to push $tag."
-                print_warning "Ensure you are authenticated to $REGISTRY (e.g., 'docker login $REGISTRY' or 'podman login $REGISTRY')."
-                exit 1
+        if [ "$DRY_RUN" = false ]; then
+            if ! git diff --quiet pyproject.toml src/tvtv2xmltv/__init__.py 2>/dev/null; then
+                print_info "Committing version bump to git..."
+                exec_cmd git add pyproject.toml src/tvtv2xmltv/__init__.py
+                exec_cmd git commit -m "chore(release): bump version to $VERSION"
+                print_success "Version bump committed."
             fi
-            print_success "Pushed $tag"
-        done
-    else
-        print_info "Skipping container image push (--build-only / --no-image-push)."
+        fi
     fi
 
-    # Stage 7: Git Tag & Push
-    if [ -d ".git" ]; then
-        if [ "$GIT_TAG" = true ]; then
-            print_section "Stage 7: Git Release Tagging"
-            print_info "Creating annotated git tag '$GIT_TAG_NAME'..."
-            exec_cmd git tag -a -f "$GIT_TAG_NAME" -m "Release $GIT_TAG_NAME"
-            print_success "Created git tag '$GIT_TAG_NAME'."
+    # Stage 4: Tag Release
+    print_section "Stage 4: Creating Release Tag"
+    print_info "Creating annotated Git tag '$GIT_TAG_NAME'..."
+    exec_cmd git tag -a -f "$GIT_TAG_NAME" -m "$RELEASE_MESSAGE"
+    print_success "Tag '$GIT_TAG_NAME' created."
 
-            if [ "$GIT_PUSH" = true ]; then
-                print_info "Pushing git tag '$GIT_TAG_NAME' to origin..."
-                exec_cmd git push origin "$GIT_TAG_NAME"
-                print_success "Pushed git tag '$GIT_TAG_NAME' to origin."
+    # Stage 5: Push to GitHub & Trigger Actions
+    if [ "$PUSH_TO_REMOTE" = true ]; then
+        print_section "Stage 5: Pushing to GitHub (Triggering Actions)"
+        print_info "Pushing branch '$current_branch' and tag '$GIT_TAG_NAME' to origin..."
+
+        exec_cmd git push origin "$current_branch"
+        exec_cmd git push origin "$GIT_TAG_NAME"
+        print_success "Pushed '$GIT_TAG_NAME' to GitHub."
+
+        # Check if GitHub CLI is available for release management
+        if command -v gh &>/dev/null && gh auth status >/dev/null 2>&1; then
+            print_info "GitHub CLI (gh) detected and authenticated."
+
+            if [ "$DRY_RUN" = true ]; then
+                exec_cmd gh release create "$GIT_TAG_NAME" --generate-notes --title "$RELEASE_MESSAGE"
             else
-                print_info "Skipping git push (--no-git-push). To push manually: git push origin $GIT_TAG_NAME"
+                # Create GitHub Release if not already existing
+                if ! gh release view "$GIT_TAG_NAME" >/dev/null 2>&1; then
+                    print_info "Creating GitHub Release with auto-generated release notes..."
+                    if gh release create "$GIT_TAG_NAME" --generate-notes --title "$RELEASE_MESSAGE"; then
+                        print_success "GitHub Release '$GIT_TAG_NAME' created."
+                    fi
+                fi
             fi
-        else
-            print_info "Skipping git tagging (--no-git-tag)."
+
+            # Optionally watch the workflow
+            if [ "$WATCH_WORKFLOW" = true ] && [ "$DRY_RUN" = false ]; then
+                print_section "Stage 6: Monitoring GitHub Actions Workflow"
+                print_info "Waiting for GitHub Actions workflow to start..."
+                sleep 4
+                print_info "Streaming workflow run..."
+                gh run watch || true
+            fi
         fi
+    else
+        print_info "Skipping push to remote (--no-push)."
+        print_info "To trigger GitHub Actions manually, push the tag: git push origin $GIT_TAG_NAME"
     fi
 
     # Summary
     echo ""
     echo -e "${BLUE}${BOLD}======================================================================${NC}"
-    echo -e "${GREEN}${BOLD}  🎉 RELEASE v${VERSION} COMPLETED SUCCESSFULLY!${NC}"
+    echo -e "${GREEN}${BOLD}  🎉 RELEASE $GIT_TAG_NAME INITIATED SUCCESSFULLY!${NC}"
     echo -e "${BLUE}${BOLD}======================================================================${NC}"
     echo ""
-    echo "Summary of release artifacts:"
+    echo "Release Details:"
     echo "  • Version:        $VERSION"
-    if [ "$GIT_TAG" = true ]; then
-        echo "  • Git Tag:        $GIT_TAG_NAME"
-    fi
-    echo "  • Container Tags:"
-    for tag in "${TARGET_TAGS[@]}"; do
-        echo "      - $tag"
-    done
+    echo "  • Git Tag:        $GIT_TAG_NAME"
+    echo "  • Repository:     https://github.com/$REPO_SLUG"
     echo ""
-    if [ "$PUSH_IMAGE" = true ]; then
-        echo -e "${GREEN}Container images have been published to ${REGISTRY}/${IMAGE_NAME}!${NC}"
+    if [ "$PUSH_TO_REMOTE" = true ]; then
+        echo -e "${CYAN}${BOLD}GitHub Actions Workflow:${NC}"
+        echo "  • Actions Run:    https://github.com/$REPO_SLUG/actions"
+        echo "  • Container Image Building in Actions:"
+        echo "      - $IMAGE_REGISTRY_PATH:$VERSION"
+        echo "      - $IMAGE_REGISTRY_PATH:$GIT_TAG_NAME"
+        echo "      - $IMAGE_REGISTRY_PATH:latest"
+        echo ""
+        echo -e "${GREEN}GitHub Actions will automatically build, test, and publish the container image.${NC}"
     else
-        echo -e "${YELLOW}Images were built and tagged locally. Run without --build-only to push.${NC}"
+        echo -e "${YELLOW}Release tag created locally. Run 'git push origin $GIT_TAG_NAME' to trigger GitHub Actions.${NC}"
     fi
     echo ""
 }

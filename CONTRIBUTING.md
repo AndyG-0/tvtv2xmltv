@@ -92,7 +92,9 @@ PYTHONPATH=src uv run pytest tests/ --cov=tvtv2xmltv --cov-report=term
 
 ## Release Process
 
-Maintainers can release new versions using `release.sh`, which runs pre-release checks, synchronizes project versions, builds and smoke-tests container images, tags image variants (`X.Y.Z`, `vX.Y.Z`, `X.Y`, `X`, `latest`), pushes to the container registry, and tags the Git release:
+Container image builds and releases are automated via GitHub Actions (`.github/workflows/docker.yml`).
+
+Maintainers can release new versions using `release.sh`, which runs pre-release quality checks, synchronizes versions across project files, creates an annotated Git tag (`vX.Y.Z`), and pushes to GitHub to trigger the Actions build and publishing pipeline:
 
 ```bash
 # Dry run preview
@@ -103,8 +105,8 @@ Maintainers can release new versions using `release.sh`, which runs pre-release 
 ./release.sh --minor
 ./release.sh --major
 
-# Release explicit version
-./release.sh 1.1.0
+# Release explicit version and watch GitHub Actions workflow live
+./release.sh 2.1.0 --watch
 ```
 
 ## Reporting Bugs
