@@ -26,8 +26,9 @@ def test_config():
 
 
 @responses.activate
-def test_converter_full_flow(test_config):
+def test_converter_full_flow(test_config, monkeypatch):
     """Test full conversion flow"""
+    monkeypatch.setattr("tvtv2xmltv.gracenote_client.time.sleep", lambda seconds: None)
     responses.add(
         responses.GET,
         PROVIDERS_URL,
@@ -91,13 +92,14 @@ def test_converter_full_flow(test_config):
     assert stats is not None
     assert stats["channels"] == 1
     assert stats["days"] == 1
-    assert stats["programs"] == 1
+    assert stats["programs"] == 4
     assert stats["lineup_id"] == "12345_OTA"
 
 
 @responses.activate
-def test_converter_save_to_file_populates_stats(test_config, tmp_path):
+def test_converter_save_to_file_populates_stats(test_config, tmp_path, monkeypatch):
     """Test that save_to_file populates file_path and file_size_bytes in stats"""
+    monkeypatch.setattr("tvtv2xmltv.gracenote_client.time.sleep", lambda seconds: None)
     responses.add(
         responses.GET,
         PROVIDERS_URL,
@@ -149,6 +151,6 @@ def test_converter_save_to_file_populates_stats(test_config, tmp_path):
     assert stats["file_size_bytes"] > 0
     assert stats["channels"] == 1
     assert stats["days"] == 1
-    assert stats["programs"] == 1
+    assert stats["programs"] == 4
     assert converter.get_stats() == converter.stats
 

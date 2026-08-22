@@ -258,9 +258,7 @@ def test_list_endpoint_shows_feed_stats(multi_lineup_config):
 def test_update_xmltv_logging_with_stats(test_config, monkeypatch, capsys):
     """_update_xmltv should log feed stats for generated files"""
     server = XMLTVServer(test_config)
-    monkeypatch.setattr(
-        server.converter, "save_to_file", lambda: [test_config.output_file]
-    )
+    monkeypatch.setattr(server.converter, "save_to_file", lambda: [test_config.output_file])
     server.converter.stats[test_config.lineups[0]] = {
         "channels": 10,
         "days": 5,
@@ -273,4 +271,3 @@ def test_update_xmltv_logging_with_stats(test_config, monkeypatch, capsys):
     assert "10 channels" in captured.out
     assert "5 days of guide" in captured.out
     assert "200 programs" in captured.out
-

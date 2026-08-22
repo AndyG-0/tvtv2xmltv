@@ -242,9 +242,11 @@ class XMLTVServer:
                         ch_str = f"{ch} channel" if ch == 1 else f"{ch} channels"
                         day_str = f"{days} day" if days == 1 else f"{days} days"
                         prog_str = f"{progs} program" if progs == 1 else f"{progs} programs"
-                        print(
-                            f"  - {lineup_id} ({filename}): {ch_str}, {day_str} of guide ({prog_str})"
+                        msg = (
+                            f"  - {lineup_id} ({filename}): "
+                            f"{ch_str}, {day_str} of guide ({prog_str})"
                         )
+                        print(msg)
             except Exception as e:  # pylint: disable=broad-except
                 print(f"Error updating XMLTV file(s): {e}")
 
