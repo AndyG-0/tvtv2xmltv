@@ -15,7 +15,7 @@
 
 1. **Black Formatter** (Code formatting):
    ```bash
-   uv run black src/ tests/ example_usage.py
+   uv run black src/ tests/
    ```
    - Line length: 100 characters
    - All Python files must be formatted with Black
@@ -36,11 +36,18 @@
    - Should have minimal warnings
    - Address critical issues before committing
 
+4. **Pre-commit Hooks** (Automated checks):
+   ```bash
+   uv run pre-commit run --all-files
+   ```
+   - Installs with `uv run pre-commit install`
+   - Automatically checks formatting and linting on git commit
+
 ### Complete Linting Command
 
 Run all linters in sequence:
 ```bash
-uv run black src/ tests/ example_usage.py && \
+uv run black src/ tests/ && \
 uv run flake8 src/ tests/ --max-line-length=100 && \
 uv run pylint src/tvtv2xmltv/ --max-line-length=100
 ```

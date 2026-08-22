@@ -26,6 +26,12 @@ env/
 ENV/
 .venv/
 
+# Environment and Local State
+.env
+.env.local
+.env.*.local
+.tvtv_default_lineup
+
 # uv
 .uv/
 uv.lock
@@ -37,9 +43,11 @@ uv.lock
 *.swo
 *~
 
-# Testing
+# Testing and Reports
 .pytest_cache/
 .coverage
+coverage.xml
+bandit-report.json
 htmlcov/
 *.cover
 

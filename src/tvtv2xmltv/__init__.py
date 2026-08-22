@@ -1,5 +1,5 @@
 """
-tvtv2xmltv - Convert TV listings from tvtv.us to XMLTV format
+tvtv2xmltv - Convert TV listings to XMLTV format
 """
 
 __version__ = "1.0.0"

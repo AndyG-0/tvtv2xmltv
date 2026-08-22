@@ -24,11 +24,25 @@ class Config:
             # Split by comma and strip whitespace, ignore empty entries
             self.lineups = [lineup.strip() for lineup in lineup_env.split(",") if lineup.strip()]
         else:
-            single = os.getenv("TVTV_LINEUP_ID", "USA-OTA30236")
+            single = os.getenv("TVTV_LINEUP_ID", "30236_OTA")
             self.lineups = [single]
 
         # Keep `lineup_id` attribute for compatibility with existing code/tests
         self.lineup_id = self.lineups[0]
+
+        # Optional explicit default lineup to serve at "/" in multi-lineup mode.
+        # Must match one of the configured lineups; otherwise it's ignored (falling
+        # back to a runtime-selected default, handled by the server).
+        default_lineup_env = os.getenv("TVTV_DEFAULT_LINEUP")
+        if default_lineup_env and default_lineup_env in self.lineups:
+            self.default_lineup = default_lineup_env
+        else:
+            if default_lineup_env:
+                print(
+                    f"Warning: TVTV_DEFAULT_LINEUP='{default_lineup_env}' is not in "
+                    f"TVTV_LINEUPS; ignoring"
+                )
+            self.default_lineup = None
 
         # Parse integer environment variables with validation
         try:
@@ -59,5 +73,5 @@ class Config:
         # External URL for source-info-url in XMLTV (optional, defaults to localhost)
         self.external_url = os.getenv("TVTV_EXTERNAL_URL", f"http://localhost:{self.port}")
 
-        # Validate days (max 8)
-        self.days = max(1, min(self.days, 8))
+        # Validate days (max 14, matching the Gracenote grid API's practical range)
+        self.days = max(1, min(self.days, 14))

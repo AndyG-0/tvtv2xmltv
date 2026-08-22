@@ -15,9 +15,11 @@ Thank you for your interest in contributing to tvtv2xmltv! This document provide
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-3. **Install dependencies**
+3. **Install dependencies and pre-commit hooks**
    ```bash
    uv pip install -e ".[dev]"
+   uv run pre-commit install
+   # or run: ./run_ci.sh --install-hooks
    ```
 
 4. **Run tests**
@@ -29,18 +31,32 @@ Thank you for your interest in contributing to tvtv2xmltv! This document provide
 
 We use the following tools to maintain code quality:
 
-- **Black** for code formatting
+- **Black** for code formatting (max line length: 100)
 - **Flake8** for linting
+- **Pre-commit** for automated commit hooks
 - **Pytest** for testing
 
-Before submitting a PR, please run:
+Before submitting a PR, run the local CI script which mirrors GitHub Actions:
+
+```bash
+# Run all local CI checks (linting, tests with coverage, security scans)
+./run_ci.sh
+
+# Or auto-format and run checks
+./run_ci.sh --fix
+```
+
+You can also run specific checks individually:
 
 ```bash
 # Format code
 uv run black src/ tests/
 
 # Lint code
-uv run flake8 src/ --max-line-length=100
+uv run flake8 src/ tests/ --max-line-length=100
+
+# Run pre-commit checks on all files
+uv run pre-commit run --all-files
 
 # Run tests with coverage
 PYTHONPATH=src uv run pytest tests/ --cov=tvtv2xmltv --cov-report=term
